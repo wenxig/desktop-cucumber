@@ -15,49 +15,51 @@ protocol.registerSchemesAsPrivileged([
 
 function createWindow(): void {
   const displays = screen.getAllDisplays()
-  displays.forEach(d => {
-    const win = new BrowserWindow({
-      x: d.bounds.x,
-      y: d.bounds.y,
-      width: d.bounds.width,
-      height: d.bounds.height,
-      show: false,
-      autoHideMenuBar: true,
-      ...(process.platform === "linux" ? { icon } : {}),
-      webPreferences: {
-        preload: join(__dirname, "../preload/index.mjs"),
-        sandbox: false,
-      },
-      frame: false,
-      transparent: true,
-      alwaysOnTop: true,
-      skipTaskbar: true,
-      focusable: false,
-      hasShadow: false,
-      enableLargerThanScreen: true,
-    })
-    win.setIgnoreMouseEvents(true, { forward: true })  // 点击穿透同时转发鼠标移动事件 :contentReference[oaicite:1]{index=1}
 
-    // 🧩 全屏与多桌面覆盖
-    win.setIgnoreMouseEvents(true, { forward: true })
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    win.setAlwaysOnTop(true, 'screen-saver');
-    
-    win.on("ready-to-show", () => {
-      win.show()
-    })
+  const win = new BrowserWindow({
+    x: displays[0].bounds.x,
+    y: displays[0].bounds.y,
+    width: displays[0].bounds.width,
+    height: displays[0].bounds.height,
+    show: false,
+    autoHideMenuBar: true,
+    ...(process.platform === "linux" ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.mjs"),
+      sandbox: false,
+    },
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    focusable: false,
+    hasShadow: false,
+    enableLargerThanScreen: true,
 
-    win.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
-      return { action: "deny" }
-    })
-
-    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-      win.loadURL(process.env["ELECTRON_RENDERER_URL"])
-    } else {
-      win.loadFile(join(__dirname, "../renderer/index.html"))
-    }
   })
+  win.setIgnoreMouseEvents(true, { forward: true })
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  win.setAlwaysOnTop(true, 'screen-saver')
+
+  win.on("ready-to-show", () => {
+    win.show()
+  })
+
+  win.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+    return { action: "deny" }
+  })
+  win.on('hide', () => {
+    win.webContents.send('workspace-changed', 'hide')
+  })
+  win.on('show', () => {
+    win.webContents.send('workspace-changed','show')
+  })
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    win.loadURL(process.env["ELECTRON_RENDERER_URL"])
+  } else {
+    win.loadFile(join(__dirname, "../renderer/index.html"))
+  }
 }
 
 app.whenReady().then(() => {
@@ -74,7 +76,7 @@ app.whenReady().then(() => {
   })
 
   if (process.platform === 'darwin') {
-    app.dock.hide()  // 隐藏 Dock 图标 :contentReference[oaicite:4]{index=4}
+    app.dock.hide()
   }
   createWindow()
 

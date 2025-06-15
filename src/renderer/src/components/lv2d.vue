@@ -35,17 +35,16 @@ const init = async () => {
     autoInteract: true, // 关闭眼睛自动跟随功能
   })
   // 调整live2d模型文件缩放比例（文件过大，需要缩小）
-  model.scale.set(0.3)
+  model.scale.set(0.25)
   // 调整x轴和y轴坐标使模型文件居中
   model.y = 0
-  model.x = -24
   // 把模型添加到舞台上
   app.stage.addChild(model)
 }
 </script>
 
 <template>
-  <div class="canvasWrap">
+  <div class="right-0 fixed bottom-0 translate-y-1/3 transition-all">
     <canvas ref="canvas" />
   </div>
 </template>
