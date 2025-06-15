@@ -1,14 +1,14 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
-import tailwindConfig from "./tailwind.config.ts";
-import tailwindcss from "tailwindcss";
-import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
-import Components from "unplugin-vue-components/vite";
+import tailwindConfig from "./tailwind.config.ts"
+import tailwindcss from "tailwindcss"
+import { NaiveUiResolver } from "unplugin-vue-components/resolvers"
+import Components from "unplugin-vue-components/vite"
 import vueJsx from '@vitejs/plugin-vue-jsx'
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin()]
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
@@ -32,4 +32,4 @@ export default defineConfig({
       },
     },
   },
-});
+})

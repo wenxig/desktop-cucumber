@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: image_tagger
+productName: 黄瓜桌面挂件
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: image_tagger
+  executableName: 黄瓜桌面挂件
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

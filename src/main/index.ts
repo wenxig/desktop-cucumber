@@ -1,9 +1,9 @@
-import { app, shell, BrowserWindow, protocol, net, screen } from "electron"
+import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import url from "url"
-import { handleMessage } from "./helper"
+import { alertMessage, handleMessage } from "./helper"
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "atom",
@@ -13,15 +13,15 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
-function createWindow(): void {
+function createWindow() {
   const displays = screen.getAllDisplays()
-
   const win = new BrowserWindow({
     x: displays[0].bounds.x,
     y: displays[0].bounds.y,
     width: displays[0].bounds.width,
     height: displays[0].bounds.height,
     show: false,
+    title: '黄瓜桌面挂件',
     autoHideMenuBar: true,
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
@@ -53,13 +53,14 @@ function createWindow(): void {
     win.webContents.send('workspace-changed', 'hide')
   })
   win.on('show', () => {
-    win.webContents.send('workspace-changed','show')
+    win.webContents.send('workspace-changed', 'show')
   })
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
     win.loadURL(process.env["ELECTRON_RENDERER_URL"])
   } else {
     win.loadFile(join(__dirname, "../renderer/index.html"))
   }
+  return win
 }
 
 app.whenReady().then(() => {
@@ -78,12 +79,49 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin') {
     app.dock.hide()
   }
-  createWindow()
+  const win = createWindow()
 
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+  const tray = new Tray(icon)
+  let editMode = false
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '编辑', type: 'normal', click: () => {
+        editMode = !editMode
+        changeEditMode()
+        alertMessage(win.webContents, 'edit-mode-changed', editMode)
+      }
+    }, {
+      label: '退出', type: 'normal', click: () => {
+        app.quit()
+      }
+    },
+  ])
+  tray.setToolTip('黄瓜桌面挂件')
+  tray.setContextMenu(contextMenu)
+  tray.addListener('click', () => {
+    tray.popUpContextMenu()
+  })
+  const changeEditMode = () => {
+    console.log('editMode changed',editMode);
+    
+    if (editMode) {
+      win.setIgnoreMouseEvents(false)
+      win.setFocusable(true)
+      win.focus()
+    } else {
+      win.blur()
+      win.setFocusable(false)
+      win.setIgnoreMouseEvents(true, { forward: true })
+    }
+  }
   handleMessage({
+    changeEditMode(to) {
+      editMode = to
+      changeEditMode()
+    },
   })
 })
 

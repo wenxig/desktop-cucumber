@@ -5,5 +5,5 @@ window.$message = useMessage()
 </script>
 
 <template>
-  <RouterView />
+  <RouterView  />
 </template>

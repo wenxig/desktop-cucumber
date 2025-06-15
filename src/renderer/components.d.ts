@@ -8,21 +8,12 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Download: typeof import('./src/components/download.vue')['default']
-    EditCharTag: typeof import('./src/components/editCharTag.vue')['default']
-    EditTag: typeof import('./src/components/editTag.vue')['default']
-    Info: typeof import('./src/components/info.vue')['default']
     Lv2d: typeof import('./src/components/lv2d.vue')['default']
-    MainEditor: typeof import('./src/components/mainEditor.vue')['default']
-    NDrawer: typeof import('naive-ui')['NDrawer']
-    NDrawerContent: typeof import('naive-ui')['NDrawerContent']
-    NEl: typeof import('naive-ui')['NEl']
-    NImage: typeof import('naive-ui')['NImage']
-    NInput: typeof import('naive-ui')['NInput']
-    NPopconfirm: typeof import('naive-ui')['NPopconfirm']
-    NSwitch: typeof import('naive-ui')['NSwitch']
-    NTab: typeof import('naive-ui')['NTab']
-    NVirtualList: typeof import('naive-ui')['NVirtualList']
+    NIcon: typeof import('naive-ui')['NIcon']
+    NPopover: typeof import('naive-ui')['NPopover']
+    NPopselect: typeof import('naive-ui')['NPopselect']
+    NSlider: typeof import('naive-ui')['NSlider']
+    NSpace: typeof import('naive-ui')['NSpace']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

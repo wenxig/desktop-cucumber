@@ -2,9 +2,10 @@ import { useMessage } from "naive-ui"
 import { Inject } from "../../preload/type"
 import * as PIXI from "pixi.js"
 declare global {
-  interface Window extends Inject {
+  interface Window {
     $message: ReturnType<typeof useMessage>
     PIXI: PIXI
+    inject: Inject
   }
 }
 
