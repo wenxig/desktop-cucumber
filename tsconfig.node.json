@@ -1,0 +1,36 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": [
+    "./*.ts",
+    "src/main/*.ts",
+    "src/main/**/*.ts",
+    "src/perload/*.ts",
+    "src/perload/**/*.ts",
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "types": [
+      "electron-vite/node",
+    ],
+    "lib": [
+      "ESNext",
+    ],
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "skipLibCheck": true,
+    /* Bundler mode */
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+  }
+}

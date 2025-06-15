@@ -1,0 +1,40 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "include": [
+    "src/renderer/*",
+    "src/renderer/**/*",
+    "src/preload/type.d.ts",
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "types": [
+      "./src/renderer/src/type.d.ts",
+      "./src/renderer/src/env.d.ts",
+      "./src/renderer/components.d.ts",
+    ],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "strict": true,
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "noImplicitReturns": false,
+    "paths": {
+      "@renderer/*": ["./src/renderer/src/*"],
+    }
+  }
+}
