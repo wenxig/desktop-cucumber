@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu } from "el
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
+import iconTemplate from "../../resources/iconTemplate@2x.png?asset"
 import url from "url"
 import { alertMessage, handleMessage } from "./helper"
 protocol.registerSchemesAsPrivileged([
@@ -35,7 +36,10 @@ function createWindow() {
     focusable: false,
     hasShadow: false,
     enableLargerThanScreen: true,
-
+    roundedCorners: false,
+    movable: false,         // ❌ 禁止移动窗口
+    resizable: false,       // ❌ 禁止调整大小
+    maximizable: false,     // ❌ 禁止最大化
   })
   win.setIgnoreMouseEvents(true, { forward: true })
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
@@ -50,9 +54,11 @@ function createWindow() {
     return { action: "deny" }
   })
   win.on('hide', () => {
+    win.setOpacity(0)
     win.webContents.send('workspace-changed', 'hide')
   })
   win.on('show', () => {
+    win.setOpacity(1)
     win.webContents.send('workspace-changed', 'show')
   })
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
@@ -84,7 +90,7 @@ app.whenReady().then(() => {
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-  const tray = new Tray(icon)
+  const tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
   let editMode = false
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -105,8 +111,8 @@ app.whenReady().then(() => {
     tray.popUpContextMenu()
   })
   const changeEditMode = () => {
-    console.log('editMode changed',editMode);
-    
+    console.log('editMode changed', editMode)
+
     if (editMode) {
       win.setIgnoreMouseEvents(false)
       win.setFocusable(true)

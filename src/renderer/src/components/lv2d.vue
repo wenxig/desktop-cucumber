@@ -2,17 +2,14 @@
 import { onMounted, onBeforeUnmount, ref, reactive, watch, computed } from "vue"
 
 import * as PIXI from "pixi.js"
-// @ts-ignore
-import { Live2DModel } from "pixi-live2d-display/cubism2" // 只需要 Cubism 2
-import type { Live2DModel as _Live2DModel, Live2DFactoryOptions } from "pixi-live2d-display"
-import { useDraggable, useEventListener, useKeyModifier, useLocalStorage } from "@vueuse/core"
+import { Live2DModel, } from "pixi-live2d-display/cubism2" // 只需要 Cubism 2
+import { useDraggable, useEventListener, useLocalStorage } from "@vueuse/core"
 import { MessageReactive, NButton } from "naive-ui"
-import { createLoadingMessage } from "@renderer/helpers/message"
 
 window.PIXI = PIXI // 为了pixi-live2d-display内部调用
 
 let app: PIXI.Application | undefined// 为了存储pixi实例
-let model: _Live2DModel | undefined// 为了存储live2d实例
+let model: Live2DModel | undefined// 为了存储live2d实例
 
 onMounted(() => {
   init()
@@ -41,13 +38,14 @@ const init = async () => {
 
   })
   // 引入live2d模型文件
-  model = await Live2DModel.from("/live2d_musumi/model.json", <Live2DFactoryOptions>{
+  model = await Live2DModel.from("/live2d_musumi/model.json", {
     autoInteract: true
-  }) as _Live2DModel
+  })
   model.scale.set(0.25)
   app.stage.addChild(model)
   model.x = modelPosition.value.x || app.stage.width / 2
   model.y = modelPosition.value.y
+  model.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 1);
 
 }
 const isEditMode = defineModel<boolean>('editMode')
