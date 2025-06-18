@@ -1,6 +1,4 @@
 import { createApp, defineComponent } from "vue"
-import '@renderer/lib/live2d.min.js'
-// import '@renderer/lib/live2dcubismcore.min.js'
 import App from "./App.vue"
 import "./index.scss"
 import {

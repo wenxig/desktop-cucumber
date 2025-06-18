@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, reactive, watch, computed, shallowRef, nextTick } from "vue"
-
+import { onMounted, onBeforeUnmount, ref, watch, computed, shallowRef } from "vue"
 import * as PIXI from "pixi.js"
 import { Live2DModel, } from "pixi-live2d-display/cubism2" // 只需要 Cubism 2
-import { useDraggable, useEventListener, useLocalStorage } from "@vueuse/core"
-import { MessageReactive, NButton } from "naive-ui"
-import ButtonSlider from "./buttonSlider.vue"
-
+import { toReactive, useDraggable, useEventListener, useLocalStorage, useMouse } from "@vueuse/core"
+import type { MessageReactive } from "naive-ui"
+import { HitAreaFrames } from "pixi-live2d-display/extra"
 window.PIXI = PIXI // 为了pixi-live2d-display内部调用
 
 let app: PIXI.Application | undefined// 为了存储pixi实例
-let model: Live2DModel | undefined// 为了存储live2d实例
+const model = shallowRef<Live2DModel>()
 
 onMounted(() => {
   init()
@@ -18,7 +16,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   app = undefined
-  model = undefined
+  model.value = undefined
 })
 const canvas = ref<HTMLCanvasElement>()
 const box = ref<HTMLDivElement>()
@@ -40,16 +38,19 @@ const init = async () => {
 
   })
   // 引入live2d模型文件
-  model = await Live2DModel.from("/live2d_musumi/model.json", {
+ const m= model.value = await Live2DModel.from("/live2d_musumi/model.json", {
     autoInteract: true
   })
   const mc = modelConfig.value
-  model.scale.set(mc.scale)
-  app.stage.addChild(model)
-  model.x = mc.x || app.stage.width / 2
-  model.y = mc.y || app.stage.height / 2
-  console.log(model)
+  m.scale.set(mc.scale)
+  app.stage.addChild(m)
+  m.x = mc.x || app.stage.width / 2
+  m.y = mc.y || app.stage.height / 2
+  console.log(m)
 
+  const hitarea = new HitAreaFrames()
+  m.addChild(hitarea)
+  hitarea.visible = true
 }
 const isEditMode = defineModel<boolean>('editMode')
 
@@ -85,31 +86,37 @@ watch(position, (position, old) => {
   modelConfig.value.y -= y
 })
 const resetPosition = () => {
-  if (!app || !model) return
+  if (!app || !model.value) return
   modelConfig.value.x = app.stage.width / 2
   modelConfig.value.y = 0
-  model.rotation = modelConfig.value.rotate = 0
+  model.value.rotation = modelConfig.value.rotate = 0
   modelConfig.value.scale = 0.25
 }
 const isHideTaskbar = shallowRef(false)
 window.inject.event('full-screen-changed', (isFulled) => {
   console.log('full-screen-changed', isFulled)
   isHideTaskbar.value = isFulled
-  // await nextTick()
-  // app?.resize()
 })
 watch(modelConfig, ({ rotate, x, y, scale }) => {
   console.log('modelConfig changed')
-  if (!model) return console.warn('can not find model')
-  model.rotation = rotate
-  model.x = x
-  model.y = y
-  model.scale.set(scale)
+  if (!model.value) return console.warn('can not find model')
+  model.value.rotation = rotate
+  model.value.x = x
+  model.value.y = y
+  model.value.scale.set(scale)
 }, { immediate: true, deep: true })
 
 
 window.inject.api.tiggerTaskBarHideStatue()
 
+const mouse = toReactive(useMouse())
+const distanceToPointer = computed(() => {
+  if (!model.value) return Infinity
+  const modelVisablePartCenter = [model.value.x + model.value.width / 2, model.value.y + model.value.height / 2] as [number, number]
+  const xDistance = mouse.x - modelVisablePartCenter[0]
+  const yDistance = mouse.y - modelVisablePartCenter[1]
+  return Math.sqrt((xDistance ** 2) + (yDistance ** 2))
+})
 const canvasOpacity = computed(() =>
   isEditMode.value ? 1 :
     (1
@@ -125,6 +132,7 @@ const canvasOpacity = computed(() =>
       canvasOpacity:{{ canvasOpacity }}<br>
       isHideTaskbar:{{ isHideTaskbar }}<br>
       isEditMode:{{ isEditMode }}<br>
+      distanceToPointer:{{ distanceToPointer }}<br>
     </div>
     <div v-if="editMode" :style class="size-[114514vw] -translate-x-1/2 -translate-y-1/2" ref="positionSetter">
     </div>

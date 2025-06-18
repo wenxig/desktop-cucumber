@@ -42,7 +42,7 @@ function createWindow() {
   })
   win.setIgnoreMouseEvents(true, { forward: true })
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  win.setAlwaysOnTop(true, 'screen-saver', 10)
+  win.setAlwaysOnTop(true, 'screen-saver', Number.MAX_VALUE)
   win.on("ready-to-show", () => {
     win.show()
   })
@@ -68,6 +68,7 @@ function createWindow() {
 }
 let tray: Tray | undefined
 app.whenReady().then(() => {
+  const displayBounds = screen.getPrimaryDisplay().bounds
   protocol.handle("atom", (request) => {
     const filePath = decodeURIComponent(request.url.slice("atom://".length))
     console.log("[atom request]", filePath)
@@ -86,7 +87,6 @@ app.whenReady().then(() => {
   const win = createWindow()
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
-
   })
   tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
   let editMode = false
@@ -129,31 +129,31 @@ app.whenReady().then(() => {
   })
 
   if (process.platform == 'win32') {
-    const screenBounds = screen.getPrimaryDisplay().bounds
     const checkWindow = (w: Window) => {
       const windowb = w.getBounds()
       if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowb.height || !w.getTitle()) return
-      if (windowb.x != 0 || windowb.height < screenBounds.height) return
+      if (windowb.x != 0 || windowb.height < displayBounds.height) return
       if (w.id != windowManager.getActiveWindow().id) return
       if (w.processId == process.pid || w.processId == process.ppid) return
-      console.log('fullscreen report', screenBounds, 'with', windowb)
+      console.log('fullscreen report', displayBounds, 'with', windowb)
       console.log('                   ', w.path, '|', w.id, '|', w.processId, w.getTitle())
       return true
     }
     const checkAndSend = (w: Window) => {
       if (!checkWindow(w)) {
-        win.setBounds(screenBounds)
+        win.setBounds(displayBounds)
         alertMessage(win.webContents, 'full-screen-changed', false)
         return
       }
-      win.setBounds(screenBounds)
+      win.setBounds(displayBounds)
       alertMessage(win.webContents, 'full-screen-changed', true)
     }
     handleMessage({
       tiggerTaskBarHideStatue() {
-        checkAndSend(windowManager.getActiveWindow())
+        windowManager.emit('window-activated', windowManager.getActiveWindow())
       },
     })
+    setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 10000)
     windowManager.addListener('window-activated', checkAndSend)
   }
 })

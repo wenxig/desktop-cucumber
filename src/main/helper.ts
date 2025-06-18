@@ -12,3 +12,5 @@ export const handleMessage = (
   }
 }
 export const alertMessage = <T extends keyof On['event']>(win: WebContents, event: T, ...args: On['event'][T]) => win.send(event, ...args)
+
+
