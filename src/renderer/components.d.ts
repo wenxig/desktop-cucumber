@@ -8,8 +8,12 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ButtonSlider: typeof import('./src/components/buttonSlider.vue')['default']
+    ButtonTooltip: typeof import('./src/components/buttonTooltip.vue')['default']
     Lv2d: typeof import('./src/components/lv2d.vue')['default']
+    NButton: typeof import('naive-ui')['NButton']
     NIcon: typeof import('naive-ui')['NIcon']
+    NInputNumber: typeof import('naive-ui')['NInputNumber']
     NPopover: typeof import('naive-ui')['NPopover']
     NPopselect: typeof import('naive-ui')['NPopselect']
     NSlider: typeof import('naive-ui')['NSlider']

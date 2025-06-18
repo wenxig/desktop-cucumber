@@ -6,6 +6,9 @@ const api: Inject["api"] = {
   changeEditMode(to) {
     return sendMessage('changeEditMode', to)
   },
+  tiggerTaskBarHideStatue() {
+    return sendMessage('tiggerTaskBarHideStatue', )
+  },
 }
 
 const event: Inject['event'] = (e, cb) => {

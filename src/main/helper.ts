@@ -2,9 +2,9 @@ import { toPairs } from "lodash-es"
 import { Inject, On } from "../preload/type"
 import { ipcMain, type WebContents } from "electron"
 export const handleMessage = (
-  list: {
+  list: Partial<{
     [K in keyof Inject['api']]: (...args: Parameters<Inject['api'][K]>) => Awaited<ReturnType<Inject['api'][K]>> | ReturnType<Inject['api'][K]>
-  }
+  }>
 ) => {
   const pairs = toPairs(list)
   for (const pair of pairs) {

@@ -1,10 +1,11 @@
 import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu } from "electron"
-import { join } from "path"
+import path, { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import iconTemplate from "../../resources/iconTemplate@2x.png?asset"
 import url from "url"
 import { alertMessage, handleMessage } from "./helper"
+import { windowManager, type Window } from 'node-window-manager'
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "atom",
@@ -15,12 +16,10 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 function createWindow() {
-  const displays = screen.getAllDisplays()
+  const displayBounds = screen.getPrimaryDisplay().bounds
+
   const win = new BrowserWindow({
-    x: displays[0].bounds.x,
-    y: displays[0].bounds.y,
-    width: displays[0].bounds.width,
-    height: displays[0].bounds.height,
+    ...displayBounds,
     show: false,
     title: '黄瓜桌面挂件',
     autoHideMenuBar: true,
@@ -43,8 +42,7 @@ function createWindow() {
   })
   win.setIgnoreMouseEvents(true, { forward: true })
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  win.setAlwaysOnTop(true, 'screen-saver')
-
+  win.setAlwaysOnTop(true, 'screen-saver', 10)
   win.on("ready-to-show", () => {
     win.show()
   })
@@ -68,7 +66,7 @@ function createWindow() {
   }
   return win
 }
-
+let tray: Tray | undefined
 app.whenReady().then(() => {
   protocol.handle("atom", (request) => {
     const filePath = decodeURIComponent(request.url.slice("atom://".length))
@@ -86,39 +84,39 @@ app.whenReady().then(() => {
     app.dock.hide()
   }
   const win = createWindow()
-
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+
   })
-  const tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
+  tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
   let editMode = false
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '编辑', type: 'normal', click: () => {
-        editMode = !editMode
-        changeEditMode()
-        alertMessage(win.webContents, 'edit-mode-changed', editMode)
-      }
-    }, {
-      label: '退出', type: 'normal', click: () => {
-        app.quit()
-      }
-    },
-  ])
+  const contextMenu = Menu.buildFromTemplate([{
+    label: 'DevTool', type: 'normal', click: () => {
+      win.webContents.openDevTools()
+    }
+  }, {
+    label: '编辑', type: 'normal', click: () => {
+      editMode = !editMode
+      changeEditMode()
+      alertMessage(win.webContents, 'edit-mode-changed', editMode)
+    }
+  }, {
+    label: '退出', type: 'normal', click: () => {
+      app.quit()
+    }
+  }])
   tray.setToolTip('黄瓜桌面挂件')
   tray.setContextMenu(contextMenu)
   tray.addListener('click', () => {
-    tray.popUpContextMenu()
+    if (tray) tray.popUpContextMenu()
   })
   const changeEditMode = () => {
     console.log('editMode changed', editMode)
-
     if (editMode) {
       win.setIgnoreMouseEvents(false)
       win.setFocusable(true)
       win.focus()
     } else {
-      win.blur()
       win.setFocusable(false)
       win.setIgnoreMouseEvents(true, { forward: true })
     }
@@ -129,8 +127,36 @@ app.whenReady().then(() => {
       changeEditMode()
     },
   })
-})
 
+  if (process.platform == 'win32') {
+    const screenBounds = screen.getPrimaryDisplay().bounds
+    const checkWindow = (w: Window) => {
+      const windowb = w.getBounds()
+      if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowb.height || !w.getTitle()) return
+      if (windowb.x != 0 || windowb.height < screenBounds.height) return
+      if (w.id != windowManager.getActiveWindow().id) return
+      if (w.processId == process.pid || w.processId == process.ppid) return
+      console.log('fullscreen report', screenBounds, 'with', windowb)
+      console.log('                   ', w.path, '|', w.id, '|', w.processId, w.getTitle())
+      return true
+    }
+    const checkAndSend = (w: Window) => {
+      if (!checkWindow(w)) {
+        win.setBounds(screenBounds)
+        alertMessage(win.webContents, 'full-screen-changed', false)
+        return
+      }
+      win.setBounds(screenBounds)
+      alertMessage(win.webContents, 'full-screen-changed', true)
+    }
+    handleMessage({
+      tiggerTaskBarHideStatue() {
+        checkAndSend(windowManager.getActiveWindow())
+      },
+    })
+    windowManager.addListener('window-activated', checkAndSend)
+  }
+})
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit()
