@@ -4,7 +4,7 @@ import * as PIXI from "pixi.js"
 import { Live2DModel, } from "pixi-live2d-display/cubism2" // 只需要 Cubism 2
 import { toReactive, useDraggable, useEventListener, useLocalStorage, useMouse } from "@vueuse/core"
 import type { MessageReactive } from "naive-ui"
-import { HitAreaFrames } from "pixi-live2d-display/extra"
+import { max } from "lodash-es"
 window.PIXI = PIXI // 为了pixi-live2d-display内部调用
 
 let app: PIXI.Application | undefined// 为了存储pixi实例
@@ -34,23 +34,24 @@ const init = async () => {
     view: canvas.value,
     width: screen.width,
     height: screen.height,
-    backgroundAlpha: 0,
-
+    backgroundAlpha: 0
   })
   // 引入live2d模型文件
- const m= model.value = await Live2DModel.from("/live2d_musumi/model.json", {
-    autoInteract: true
+  const m = model.value = await Live2DModel.from("/live2d_musumi/model.json", {
+    autoInteract: true,
   })
+  m.transform.pivot.set(m.width / 2, m.height / 2)
   const mc = modelConfig.value
   m.scale.set(mc.scale)
   app.stage.addChild(m)
   m.x = mc.x || app.stage.width / 2
   m.y = mc.y || app.stage.height / 2
+  m.angle = mc.rotate
   console.log(m)
-
-  const hitarea = new HitAreaFrames()
-  m.addChild(hitarea)
-  hitarea.visible = true
+  // const hitarea = new HitAreaFrames()
+  // hitarea.visible = true
+  // m.addChild(hitarea)
+  // 没用, wsd没考虑点击, 所以没有身体部件
 }
 const isEditMode = defineModel<boolean>('editMode')
 
@@ -88,7 +89,7 @@ watch(position, (position, old) => {
 const resetPosition = () => {
   if (!app || !model.value) return
   modelConfig.value.x = app.stage.width / 2
-  modelConfig.value.y = 0
+  modelConfig.value.y = app.stage.height / 2
   model.value.rotation = modelConfig.value.rotate = 0
   modelConfig.value.scale = 0.25
 }
@@ -100,7 +101,7 @@ window.inject.event('full-screen-changed', (isFulled) => {
 watch(modelConfig, ({ rotate, x, y, scale }) => {
   console.log('modelConfig changed')
   if (!model.value) return console.warn('can not find model')
-  model.value.rotation = rotate
+  model.value.angle = rotate
   model.value.x = x
   model.value.y = y
   model.value.scale.set(scale)
@@ -110,31 +111,44 @@ watch(modelConfig, ({ rotate, x, y, scale }) => {
 window.inject.api.tiggerTaskBarHideStatue()
 
 const mouse = toReactive(useMouse())
-const distanceToPointer = computed(() => {
-  if (!model.value) return Infinity
-  const modelVisablePartCenter = [model.value.x + model.value.width / 2, model.value.y + model.value.height / 2] as [number, number]
-  const xDistance = mouse.x - modelVisablePartCenter[0]
-  const yDistance = mouse.y - modelVisablePartCenter[1]
-  return Math.sqrt((xDistance ** 2) + (yDistance ** 2))
+const distanceToPointerOpacity = computed(() => {
+  if (!model.value) return 0
+  const md = model.value
+  const xDistance = mouse.x - md.x
+  const yDistance = mouse.y - md.y
+  if (yDistance < -200 || xDistance < -200 || yDistance > 200 || xDistance > 200) return 0
+  const length = Math.sqrt((xDistance ** 2) + (yDistance ** 2))
+  const v = (200 -
+    length > 200 ? length : 200
+  ) / 200
+  return v > 0.7 ? 0.7 : v
 })
 const canvasOpacity = computed(() =>
   isEditMode.value ? 1 :
-    (1
+    max([(
+      1
       - (isHideTaskbar.value ? 0.3 : 0)
-    ))
+      - distanceToPointerOpacity.value
+    ), 0.1]) || 0.1)
 </script>
 
 <template>
   <div ref="box" :class="[isEditMode && '!bg-opacity-50']"
     class="right-0 size-full fixed bottom-0 bg-opacity-0 transition-all bg-black">
     <canvas ref="canvas" :style="{ opacity: canvasOpacity }" class='transition-all' />
-    <div class="fixed top-1 left-1 bg-white p-3 shadow-md rounded-md z-10">
-      canvasOpacity:{{ canvasOpacity }}<br>
-      isHideTaskbar:{{ isHideTaskbar }}<br>
-      isEditMode:{{ isEditMode }}<br>
-      distanceToPointer:{{ distanceToPointer }}<br>
-    </div>
     <div v-if="editMode" :style class="size-[114514vw] -translate-x-1/2 -translate-y-1/2" ref="positionSetter">
+    </div>
+    <div v-if="model" :style="{
+      left: `${modelConfig.x}px`,
+      top: `${modelConfig.y + model.height * 0.15}px`,
+      width: `${model.width * 0.4}px`,
+      height: `${model.height}px`,
+      rotate: `${modelConfig.rotate}deg`,
+      '--tw-scale-x': modelConfig.scale * 4,
+      '--tw-scale-y': modelConfig.scale * 4
+    }" :class="[isEditMode && 'pointer-events-none']"
+      class="fixed z-10 bg-opacity-30 -translate-x-1/2 -translate-y-1/2">
+      <!-- hitbox -->
     </div>
     <NSpace class="absolute left-2 bottom-2" v-if="editMode">
       <ButtonTooltip name="重置位置" @click="resetPosition">
@@ -147,7 +161,7 @@ const canvasOpacity = computed(() =>
         </svg>
       </ButtonTooltip>
 
-      <ButtonSlider :step="0.01" :min="-3.14" :max="3.14" v-model="modelConfig.rotate" name="旋转模型">
+      <ButtonSlider :step="0.01" :min="-180" :max="180" v-model="modelConfig.rotate" name="旋转模型">
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 16 16">
           <g fill="none">
             <path

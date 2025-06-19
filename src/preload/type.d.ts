@@ -3,6 +3,7 @@ export type Inject = {
   api: {
     changeEditMode(to: boolean): void
     tiggerTaskBarHideStatue(): void
+    changeTouchMode(to: boolean): void
   }
   event<T extends keyof On['event']>(event: T, callback: (...p: On['event'][T]) => void): () => void
 }
@@ -12,5 +13,6 @@ export type On = {
     'workspace-changed': [is: 'show' | 'hide']
     'edit-mode-changed': [to: boolean]
     'full-screen-changed': [to: boolean]
+    'touch-mode-changed': [to: boolean]
   }
 }

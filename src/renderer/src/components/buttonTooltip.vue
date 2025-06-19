@@ -4,6 +4,7 @@ defineEmits<{
 }>()
 defineSlots<{
   default: HTMLElement
+  content?: any
 }>()
 defineProps<{
   name: string

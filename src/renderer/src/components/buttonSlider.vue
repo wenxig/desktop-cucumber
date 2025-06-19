@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import ButtonTooltip from './buttonTooltip.vue';
+import ButtonTooltip from './buttonTooltip.vue'
 
 const modelValue = defineModel<number>({ required: true })
 defineProps<{
@@ -15,18 +15,29 @@ defineSlots<{
 </script>
 
 <template>
-  <NPopselect :options="[]" trigger="click" class="!w-80">
-    <ButtonTooltip :name>
-      <slot />
-    </ButtonTooltip>
-    <template #header>
-      <span class="pl-1">{{ name }}</span>
+  <NPopover trigger="hover" placement="top-start">
+    <template #trigger>
+      <NPopselect :options="[]" trigger="click" class="!w-80">
+        <NButton size="large" circle class="!bg-white" @click.stop.prevent>
+          <template #icon>
+            <NIcon>
+              <slot />
+            </NIcon>
+          </template>
+        </NButton>
+        <template #header>
+          <span class="pl-1">{{ name }}</span>
+        </template>
+        <template #empty>
+          <NSlider v-model:value="modelValue" :step :min :max />
+        </template>
+        <template #action>
+          <NInputNumber v-model:value="modelValue" :step :min :max />
+        </template>
+      </NPopselect>
     </template>
-    <template #empty>
-      <NSlider v-model:value="modelValue" :step :min :max />
-    </template>
-    <template #action>
-      <NInputNumber v-model:value="modelValue" :step :min :max />
-    </template>
-  </NPopselect>
+    <span>
+      {{ name }}
+    </span>
+  </NPopover>
 </template>

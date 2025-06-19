@@ -21,7 +21,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
-    "@vueuse/core": "^12.8.2",
+    "@vueuse/core": "^13.4.0",
     "lodash-es": "^4.17.21",
     "mitt": "^3.0.1",
     "naive-ui": "^2.41.0",
@@ -55,7 +55,9 @@
       "electron",
       "esbuild",
       "extract-file-icon",
-      "node-window-manager"
+      "iohook",
+      "node-window-manager",
+      "uiohook-napi"
     ],
     "ignoredBuiltDependencies": [
       "cwebp-bin"

@@ -1,5 +1,5 @@
-import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu } from "electron"
-import path, { join } from "path"
+import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu, globalShortcut } from "electron"
+import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import iconTemplate from "../../resources/iconTemplate@2x.png?asset"
@@ -155,6 +155,30 @@ app.whenReady().then(() => {
     })
     setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 10000)
     windowManager.addListener('window-activated', checkAndSend)
+  }
+
+  let isTouchMode = false
+  globalShortcut.register('shift+alt+e', () => {
+    isTouchMode = !isTouchMode
+    changeTouchMode()
+    alertMessage(win.webContents, 'touch-mode-changed', isTouchMode)
+  })
+  handleMessage({
+    changeTouchMode(to) {
+      isTouchMode = to
+      changeTouchMode()
+    },
+  })
+  const changeTouchMode = () => {
+    console.log('touchMode changed', isTouchMode)
+    if (isTouchMode) {
+      win.setIgnoreMouseEvents(false)
+      win.setFocusable(true)
+      win.focus()
+    } else {
+      win.setFocusable(false)
+      win.setIgnoreMouseEvents(true, { forward: true })
+    }
   }
 })
 app.on("window-all-closed", () => {
