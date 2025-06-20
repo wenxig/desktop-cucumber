@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 import icon from "../../resources/icon.png?asset"
 import iconTemplate from "../../resources/iconTemplate@2x.png?asset"
 import url from "url"
-import { alertMessage, handleMessage } from "./helper"
+import { ElectronWindowManager, handleMessage, SharedValue } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
 protocol.registerSchemesAsPrivileged([
   {
@@ -66,7 +66,6 @@ function createWindow() {
   }
   return win
 }
-let tray: Tray | undefined
 app.whenReady().then(() => {
   const displayBounds = screen.getPrimaryDisplay().bounds
   protocol.handle("atom", (request) => {
@@ -74,31 +73,23 @@ app.whenReady().then(() => {
     console.log("[atom request]", filePath)
     return net.fetch(url.pathToFileURL(filePath).toString())
   })
-
-  electronApp.setAppUserModelId("com.electron")
-
+  electronApp.setAppUserModelId("com.wenxig.desktoptop")
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
   if (process.platform === 'darwin') {
     app.dock.hide()
   }
-  const win = createWindow()
-  app.on("activate", function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-  tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
-  let editMode = false
+  const wins = new ElectronWindowManager()
+  const isEditMode = new SharedValue(false, 'isEditMode', wins)
+  const tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
   const contextMenu = Menu.buildFromTemplate([{
     label: 'DevTool', type: 'normal', click: () => {
-      win.webContents.openDevTools()
+      wins.each(v => v.webContents.openDevTools())
     }
   }, {
     label: '编辑', type: 'normal', click: () => {
-      editMode = !editMode
-      changeEditMode()
-      alertMessage(win.webContents, 'edit-mode-changed', editMode)
+      isEditMode.value = !isEditMode.value
     }
   }, {
     label: '退出', type: 'normal', click: () => {
@@ -110,76 +101,66 @@ app.whenReady().then(() => {
   tray.addListener('click', () => {
     if (tray) tray.popUpContextMenu()
   })
-  const changeEditMode = () => {
+  isEditMode.watch((editMode) => {
     console.log('editMode changed', editMode)
     if (editMode) {
-      win.setIgnoreMouseEvents(false)
-      win.setFocusable(true)
-      win.focus()
+      wins.doSync('setIgnoreMouseEvents', false)
+      wins.doSync('setFocusable', true)
+      wins.doSync('focus')
     } else {
-      win.setFocusable(false)
-      win.setIgnoreMouseEvents(true, { forward: true })
+      wins.doSync('setFocusable', false)
+      wins.doSync('setIgnoreMouseEvents', true, { forward: true })
     }
-  }
-  handleMessage({
-    changeEditMode(to) {
-      editMode = to
-      changeEditMode()
-    },
   })
 
+
+  const isFullScreen = new SharedValue(false, 'isFullScreen', wins)
   if (process.platform == 'win32') {
     const checkWindow = (w: Window) => {
       const windowb = w.getBounds()
-      if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowb.height || !w.getTitle()) return
-      if (windowb.x != 0 || windowb.height < displayBounds.height) return
-      if (w.id != windowManager.getActiveWindow().id) return
-      if (w.processId == process.pid || w.processId == process.ppid) return
+      if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowb.height || !w.getTitle()) return false
+      if (windowb.x != 0 || windowb.height < displayBounds.height) return false
+      if (w.id != windowManager.getActiveWindow().id) return false
+      if (w.processId == process.pid || w.processId == process.ppid) return false
       console.log('fullscreen report', displayBounds, 'with', windowb)
       console.log('                   ', w.path, '|', w.id, '|', w.processId, w.getTitle())
       return true
     }
-    const checkAndSend = (w: Window) => {
-      if (!checkWindow(w)) {
-        win.setBounds(displayBounds)
-        alertMessage(win.webContents, 'full-screen-changed', false)
-        return
-      }
-      win.setBounds(displayBounds)
-      alertMessage(win.webContents, 'full-screen-changed', true)
-    }
-    handleMessage({
-      tiggerTaskBarHideStatue() {
-        windowManager.emit('window-activated', windowManager.getActiveWindow())
-      },
+    isFullScreen.watch(()=>{
+      wins.doSync('setBounds', displayBounds)
     })
-    setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 10000)
-    windowManager.addListener('window-activated', checkAndSend)
+    handleMessage({
+      tiggerTaskBarHideStatue(){
+        windowManager.emit('window-activated', windowManager.getActiveWindow())
+      }
+    })
+    setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 5000)
+    windowManager.addListener('window-activated', win => {
+      isFullScreen.value = checkWindow(win)
+    })
   }
 
-  let isTouchMode = false
+  const isTouchMode = new SharedValue(false, 'isTouchMode', wins)
   globalShortcut.register('shift+alt+e', () => {
-    isTouchMode = !isTouchMode
-    changeTouchMode()
-    alertMessage(win.webContents, 'touch-mode-changed', isTouchMode)
+    isTouchMode.value = !isTouchMode.value
   })
-  handleMessage({
-    changeTouchMode(to) {
-      isTouchMode = to
-      changeTouchMode()
-    },
-  })
-  const changeTouchMode = () => {
+  isTouchMode.watch((isTouchMode) => {
     console.log('touchMode changed', isTouchMode)
     if (isTouchMode) {
-      win.setIgnoreMouseEvents(false)
-      win.setFocusable(true)
-      win.focus()
+      wins.doSync('setIgnoreMouseEvents', false)
+      wins.doSync('setFocusable', true)
+      wins.doSync('focus')
     } else {
-      win.setFocusable(false)
-      win.setIgnoreMouseEvents(true, { forward: true })
+      wins.doSync('setFocusable', false)
+      wins.doSync('setIgnoreMouseEvents', true, { forward: true })
     }
-  }
+  })
+
+
+  wins.add(createWindow())
+  app.on("activate", function () {
+    if (BrowserWindow.getAllWindows().length === 0) wins.add(createWindow())
+  })
 })
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

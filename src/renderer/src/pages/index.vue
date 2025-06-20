@@ -1,13 +1,12 @@
 <script setup lang='ts'>
 import Lv2d from '@renderer/components/lv2d.vue'
-import { ref, watch } from 'vue'
-const editMode = ref(false)
+import { SharedValue } from '@renderer/helpers/ipc'
+const isEditMode = (new SharedValue<boolean>('isEditMode')).toRef()
 window.inject.event('edit-mode-changed', to => {
-  editMode.value = to
+  isEditMode.value = to
 })
-watch(editMode, editMode => window.inject.api.changeEditMode(editMode))
 </script>
 
 <template>
-  <Lv2d v-model:editMode="editMode" />
+  <Lv2d v-model:isEditMode="isEditMode" />
 </template>
