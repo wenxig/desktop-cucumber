@@ -9,8 +9,9 @@ declare global {
   }
 }
 
-export interface KnownTags {
-  anthor: Record<string, number>
-  character: Record<string, Set<string>>
-  origin: Record<string, number>
+export interface ModleConfig {
+  x: number
+  y: number
+  rotate: number
+  scale: number
 }

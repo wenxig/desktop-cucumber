@@ -46,7 +46,6 @@ function createWindow() {
   win.on("ready-to-show", () => {
     win.show()
   })
-
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: "deny" }
@@ -129,16 +128,16 @@ app.whenReady().then(() => {
     isFullScreen.watch(()=>{
       wins.doSync('setBounds', displayBounds)
     })
-    handleMessage({
-      tiggerTaskBarHideStatue(){
-        windowManager.emit('window-activated', windowManager.getActiveWindow())
-      }
-    })
     setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 5000)
     windowManager.addListener('window-activated', win => {
       isFullScreen.value = checkWindow(win)
     })
   }
+  handleMessage({
+    tiggerTaskBarHideStatue() {
+      windowManager.emit('window-activated', windowManager.getActiveWindow())
+    }
+  })
 
   const isTouchMode = new SharedValue(false, 'isTouchMode', wins)
   globalShortcut.register('shift+alt+e', () => {

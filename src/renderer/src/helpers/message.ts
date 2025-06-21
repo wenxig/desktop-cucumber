@@ -1,6 +1,6 @@
 import { isFunction } from "lodash-es"
-import { useMessage } from "naive-ui"
-import { type MaybeRefOrGetter, computed, isRef, watch } from "vue"
+import { MessageReactive, MessageOptions } from "naive-ui"
+import { type MaybeRefOrGetter, type VNodeChild, computed, isRef, watch } from "vue"
 import { delay } from "./delay"
 
 export const createLoadingMessage = (text: MaybeRefOrGetter<string> = '加载中', api = window.$message) => {
@@ -67,4 +67,42 @@ export const createLoadingMessage = (text: MaybeRefOrGetter<string> = '加载中
     instance: loading
   }
   return ctx
+}
+
+export type RawMessage = [content: string | (() => VNodeChild), config?: MessageOptions]
+export const createMessageStore = <T extends string>(messages: [T, RawMessage][], api = window.$message) => {
+  const msgs = {} as Record<T, MessageReactive>
+  const showSome = (messages: [T, RawMessage][]) => {
+    for (const [key, [content, config]] of messages) {
+      const _config: MessageOptions = {
+        type: 'info',
+        ...(config ?? {}),
+        duration: 0,
+      }
+      msgs[key] = api.create(content, _config)
+    }
+  }
+  return {
+    showAll() {
+      showSome(messages)
+    },
+    closeAll() {
+      for (const key in msgs) {
+        if (!Object.prototype.hasOwnProperty.call(msgs, key)) continue
+        const msg = msgs[key]
+        msg.destroy()
+      }
+    },
+    showSome(keys: T[]) {
+      showSome(messages.filter(row => keys.includes(row[0])))
+    },
+    closeSome(keys: T[]) {
+      for (const key in msgs) {
+        if (!Object.prototype.hasOwnProperty.call(msgs, key)) continue
+        if (!keys.includes(key)) continue
+        const msg = msgs[key]
+        msg.destroy()
+      }
+    }
+  }
 }

@@ -13,7 +13,11 @@ const event: Inject['event'] = (e, cb) => {
 
 const inject: Inject = {
   api: (p, ...args) => {
-    ipcRenderer.invoke(p, ...args)
+    try {
+      ipcRenderer.invoke(p, ...args)
+    } catch (error) {
+      console.warn(error)
+    }
   },
   sharedValue: {
     boot(name) {

@@ -20,5 +20,6 @@ declare module 'vue' {
     NSpace: typeof import('naive-ui')['NSpace']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Stage: typeof import('./src/components/stage.vue')['default']
   }
 }

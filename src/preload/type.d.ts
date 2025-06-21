@@ -15,8 +15,5 @@ export type Inject = {
 export type On = {
   event: {
     'workspace-changed': [is: 'show' | 'hide']
-    'edit-mode-changed': [to: boolean]
-    'full-screen-changed': [to: boolean]
-    'touch-mode-changed': [to: boolean]
   }
 }
