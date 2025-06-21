@@ -18,6 +18,7 @@ export class SharedValue<T> {
   public destroy: () => void
   constructor(private _value: T, public readonly name: string, private window: ElectronWindowManager) {
     const handleValueChange = (_e: any, value: T) => {
+      if (this._value == value) return
       this._value = value
       this.mitt.emit('watch', this._value)
     }

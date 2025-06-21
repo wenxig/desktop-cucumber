@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.wenxig.desktoptoy
 productName: 黄瓜桌面挂件
 directories:
   buildResources: build

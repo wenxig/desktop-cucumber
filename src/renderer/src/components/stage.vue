@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch, computed, shallowRef, provide, shallowReactive } from "vue"
+import { onMounted, onBeforeUnmount, ref, watch, computed, shallowRef, provide, shallowReactive, reactive } from "vue"
 import * as PIXI from "pixi.js"
 import { toReactive, until, useDraggable, useEventListener, useLocalStorage, useMouse } from "@vueuse/core"
 import { SharedValue } from "@renderer/helpers/ipc"
@@ -10,12 +10,8 @@ import { useStageStore } from "@renderer/stores/stage"
 
 
 const stageStore = useStageStore()
-const $props = withDefaults(defineProps<{
-  editable?: boolean
-}>(), {
-  editable: true
-})
-const isEditMode = defineModel<boolean>('isEditMode', { required: true })
+
+const isEditMode = new SharedValue<boolean>('isEditMode').toRef()
 const box = ref<HTMLDivElement>()
 
 
@@ -28,19 +24,18 @@ const modelConfig = useLocalStorage<ModleConfig>('modelConfig', {
 
 
 
-if ($props.editable) {
-  const editTooltips = createMessageStore([
-    ['quit', ['按下[esc]或再次点击[编辑]退出编辑']],
-    ['drag', ['左键按住屏幕滑动以调整位置']]
-  ])
-  watch(isEditMode, isEditMode => {
-    if (isEditMode) editTooltips.showAll()
-    else editTooltips.closeAll()
-  })
-  useEventListener('keydown', e => {
-    if (e.key == 'Escape' && isEditMode.value) isEditMode.value = false
-  })
-}
+const editTooltips = createMessageStore([
+  ['quit', ['按下[esc]或再次点击[编辑]退出编辑']],
+  ['drag', ['左键按住屏幕滑动以调整位置']]
+])
+watch(isEditMode, isEditMode => {
+  if (isEditMode) editTooltips.showAll()
+  else editTooltips.closeAll()
+})
+useEventListener('keydown', e => {
+  if (e.key == 'Escape' && isEditMode.value) isEditMode.value = false
+})
+
 
 const positionSetter = ref<HTMLDivElement>()
 const positionSetterDragInstance = toReactive(useDraggable(positionSetter, {
@@ -73,28 +68,29 @@ const createStage = (canvas: HTMLCanvasElement) => new PIXI.Application({
   height: screen.height,
   backgroundAlpha: 0,
 })
-const canvasOpacity = computed(() =>
+const bgAlpha = computed(() =>
   isEditMode.value ? 1 : 1
     - (isHideTaskbar.value ? 0.3 : 0)
 )
 
-const canvases = shallowReactive(new Map<symbol, HTMLCanvasElement>())
+const canvases = reactive(new Map<symbol, HTMLCanvasElement>())
 const useStage = async () => {
+  console.log('create stage...')
   const key = Symbol()
   stageStore.stages.set(key, undefined)
-  await until(canvases).toMatch(v => v.has(key))
+  await until(() => canvases.get(key)).toBeTruthy()
   stageStore.stages.set(key, createStage(canvases.get(key)!))
-  return stageStore.stages.get(key)!
+  console.log('create stage done')
+  return [stageStore.stages.get(key)!, canvases.get(key)!] as [PIXI.Application, HTMLCanvasElement]
 }
-provide(InjectKeys.useStage, <any>useStage)
+provide(InjectKeys.useStage, useStage)
 </script>
 
 <template>
   <div ref="box" :class="[isEditMode && '!bg-opacity-50']"
     class="right-0 size-full fixed bottom-0 bg-opacity-0 transition-all bg-black">
-    <div>
-      <canvas v-for="key of stageStore.stages.keys()" :ref="c => canvases[key] = c" :style="{ opacity: canvasOpacity }"
-        class='transition-all' />
+    <div :style="{ opacity: bgAlpha }" class='transition-all'>
+      <canvas v-for="key of stageStore.stages.keys()" :ref="c => canvases.set(key, <any>c)" class='transition-all' />
     </div>
     <div v-if="isEditMode" :style="positionSetterDragInstance.style"
       class="size-[114514vw] -translate-x-1/2 -translate-y-1/2" ref="positionSetter">

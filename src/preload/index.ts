@@ -50,3 +50,4 @@ if (process.contextIsolated) {
   //@ts-ignore
   window.inject = inject
 }
+

@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@types/node": "^24.0.1"
+  },
+  "scripts": {
+    "run": "bun ./main.ts"
+  }
+}

@@ -1,5 +1,9 @@
 import { onUnmounted, ref, watch, type Ref } from "vue"
 import mitt from 'mitt'
+
+const sharedValueLocal = mitt<{
+  changed: [name: string, value: SharedValue<any>]
+}>()
 export class SharedValue<T> {
   private _value: T
   public destroy: () => void
@@ -8,9 +12,17 @@ export class SharedValue<T> {
     const stopSync = window.inject.sharedValue.watch<T>(name, value => {
       this.value = value
     })
+    const handleLocalSync = ([name, value]: [name: string, value: SharedValue<any>]) => {
+      console.log('handleLocalSync', name, this.name, value)
+      if (name != this.name || value == this) return
+      this._value = value.value
+      this.mitt.emit('watch', value.value)
+    }
+    sharedValueLocal.on('changed', handleLocalSync)
     this.destroy = () => {
       try {
         stopSync()
+        sharedValueLocal.off('changed', handleLocalSync)
       } catch (error) {
         console.warn(`Shared value was destroyed. (${name})`)
         console.warn(error)
@@ -22,9 +34,7 @@ export class SharedValue<T> {
     const stopRawWatch = this.watch(val => v.value = val)
     const stopWatch = watch(v, (v, ov) => {
       if (v == ov) return
-      this._value = v
-      window.inject.sharedValue.sync(this.name, this._value)
-      this.mitt.emit('watch', this._value)
+      this.value = v
     }, { deep: true })
     onUnmounted(() => {
       stopWatch()
@@ -37,6 +47,7 @@ export class SharedValue<T> {
     return this._value
   }
   set value(v) {
+    console.log('SharedValue.value(set)', this.name, v)
     this._value = v
     this.sync()
   }
@@ -44,8 +55,10 @@ export class SharedValue<T> {
     this.value = f(this._value)
   }
   private sync() {
-    window.inject.sharedValue.sync(this.name, this._value)
     this.mitt.emit('watch', this._value)
+    sharedValueLocal.emit('changed', [this.name, this])
+    console.log('SharedValue.sync', this.name, this._value)
+    window.inject.sharedValue.sync(this.name, this._value)
   }
   private mitt = mitt<{
     watch: T

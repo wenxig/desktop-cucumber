@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch, computed, shallowRef, inject } from "vue"
-import { Live2DModel, } from "pixi-live2d-display" // 只需要 Cubism 2
-import { toReactive, until, useLocalStorage, useMouse } from "@vueuse/core"
-import { inRange, min } from "lodash-es"
+import { Live2DModel, } from "pixi-live2d-display-advanced"
+import { toReactive, useLocalStorage, useMouse } from "@vueuse/core"
+import { inRange, max, min } from "lodash-es"
 import { numberMap } from "@renderer/helpers/number"
 import { InjectKeys } from "@renderer/helpers/symbol"
 import { ModleConfig } from "@renderer/type"
-
+import { SharedValue } from "@renderer/helpers/ipc"
+import { HitAreaFrames } from "pixi-live2d-display-advanced/extra"
 const useStage = inject(InjectKeys.useStage)
-const app = await useStage?.()
+const [app, canvas] = await useStage!()
 const model = shallowRef<Live2DModel>()
-const isEditMode = defineModel<boolean>('isEditMode', { required: true })
+const isEditMode = new SharedValue<boolean>('isEditMode').toRef()
 const loadUrl = defineModel<string>('loadUrl', { required: true })
+const $props = withDefaults(defineProps<{
+  editable?: boolean
+}>(), {
+  editable: false
+})
 onMounted(() => {
   watch(loadUrl, loadUrl => {
     init(loadUrl)
@@ -48,7 +54,7 @@ const init = async (loadUrl: string) => {
   if (!app) return
   if (model.value) app.stage.removeChild(model.value)
   const m = model.value = await Live2DModel.from(loadUrl, {
-    autoInteract: true,
+    autoFocus: $props.editable,
   })
   m.transform.pivot.set(m.width / 2, m.height / 2)
   const mc = modelConfig.value
@@ -57,14 +63,15 @@ const init = async (loadUrl: string) => {
   m.x = mc.x || app.stage.width / 2
   m.y = mc.y || app.stage.height / 2
   m.angle = mc.rotate
+  const hitAreaFrames = new HitAreaFrames()
+  m.addChild(hitAreaFrames)
+  hitAreaFrames.visible = true
 
-  m.alpha = 0.1
-  console.log(m)
+  m.on('tap',()=>window.$message.info('taped'))
 }
-
 watch(modelConfig, ({ rotate, x, y, scale }) => {
   console.log('modelConfig changed')
-  if (!model.value) return console.warn('can not find model')
+  if (!model.value) return
   model.value.angle = rotate
   model.value.x = x
   model.value.y = y
@@ -72,6 +79,7 @@ watch(modelConfig, ({ rotate, x, y, scale }) => {
 }, { immediate: true, deep: true })
 
 const headBox = ref<HTMLDivElement>()
+const bodyBox = ref<HTMLDivElement>()
 
 const mouse = toReactive(useMouse())
 const distanceToPointerOpacity = computed(() => {
@@ -84,10 +92,23 @@ const distanceToPointerOpacity = computed(() => {
   const length = Math.sqrt((xDistance ** 2) + (yDistance ** 2))
   return min([numberMap(length, 50, headBound.width, 0.7, 0), 0.7]) ?? 0.7
 })
-watch(distanceToPointerOpacity, distanceToPointerOpacity => {
-  if (!model.value) return
-  // model.value.alpha = 1
-  //   - distanceToPointerOpacity
+const isOnBodyOpacity = computed(() => {
+  if (!bodyBox.value) return 0
+  const bodyBound = bodyBox.value.getBoundingClientRect()
+  if (inRange(mouse.x, bodyBound.x, bodyBound.x + bodyBound.width)
+    && inRange(mouse.y, bodyBound.y, bodyBound.y + bodyBound.height)) return 0.7
+  return 0
+})
+watch([
+  isEditMode,
+  $props,
+  distanceToPointerOpacity,
+  isOnBodyOpacity
+], () => {
+  canvas.style.opacity = isEditMode.value ? ($props.editable ? '1' : '0.05') : `${max([1
+    - distanceToPointerOpacity.value
+    - isOnBodyOpacity.value
+    , 0.1])}`
 })
 </script>
 
@@ -108,6 +129,18 @@ watch(distanceToPointerOpacity, distanceToPointerOpacity => {
       rotate: `${-modelConfig.rotate}deg`,
       '--tw-scale-x': modelConfig.scale * 4,
       '--tw-scale-y': modelConfig.scale * 4
-    }" ref="headBox"></div>
+    }" ref="headBox">
+      <!-- head -->
+    </div>
+    <div class="absolute left-0 bg-yellow- bg-opacity-30 translate-x-0" @mouseenter.stop @mouseleave.stop :style="{
+      top: `${model.width * 0.4}px`,
+      width: `${model.width * 0.4}px`,
+      height: `${model.width * 0.4}px`,
+      rotate: `${-modelConfig.rotate}deg`,
+      '--tw-scale-x': modelConfig.scale * 4,
+      '--tw-scale-y': modelConfig.scale * 4
+    }" ref="bodyBox">
+      <!-- body -->
+    </div>
   </div>
 </template>

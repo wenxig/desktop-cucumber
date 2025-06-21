@@ -6,12 +6,19 @@ import tailwindcss from "tailwindcss"
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers"
 import Components from "unplugin-vue-components/vite"
 import vueJsx from '@vitejs/plugin-vue-jsx'
+const appName = '黄瓜桌面挂件'
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    define: {
+      __APP_NAME__: `'${appName}'`
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    define: {
+      __APP_NAME__: `'${appName}'`
+    }
   },
   renderer: {
     resolve: {
@@ -29,7 +36,13 @@ export default defineConfig({
     css: {
       postcss: {
         plugins: [tailwindcss(tailwindConfig)],
-      },
+      }
     },
+    experimental: <any>{
+      enableNativePlugin: true
+    },
+    define: {
+      __APP_NAME__: `'${appName}'`
+    }
   },
 })

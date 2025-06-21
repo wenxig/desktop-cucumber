@@ -33,6 +33,7 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "noImplicitReturns": false,
+    "jsxImportSource": "vue",
     "paths": {
       "@renderer/*": ["./src/renderer/src/*"],
     }

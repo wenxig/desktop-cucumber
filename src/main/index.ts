@@ -1,8 +1,8 @@
 import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu, globalShortcut } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
-import icon from "../../resources/icon.png?asset"
-import iconTemplate from "../../resources/iconTemplate@2x.png?asset"
+import icon from "../../resources/iconWhite.png?asset"
+import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import url from "url"
 import { ElectronWindowManager, handleMessage, SharedValue } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
@@ -17,13 +17,13 @@ protocol.registerSchemesAsPrivileged([
 
 function createWindow() {
   const displayBounds = screen.getPrimaryDisplay().bounds
-
+  console.log('displayBounds', displayBounds)
   const win = new BrowserWindow({
     ...displayBounds,
     show: false,
-    title: '黄瓜桌面挂件',
+    title: __APP_NAME__,
     autoHideMenuBar: true,
-    ...(process.platform === "linux" ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
@@ -45,6 +45,7 @@ function createWindow() {
   win.setAlwaysOnTop(true, 'screen-saver', Number.MAX_VALUE)
   win.on("ready-to-show", () => {
     win.show()
+    win.setBounds(displayBounds)
   })
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -72,7 +73,7 @@ app.whenReady().then(() => {
     console.log("[atom request]", filePath)
     return net.fetch(url.pathToFileURL(filePath).toString())
   })
-  electronApp.setAppUserModelId("com.wenxig.desktoptop")
+  electronApp.setAppUserModelId("com.wenxig.desktoptoy")
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -81,7 +82,7 @@ app.whenReady().then(() => {
   }
   const wins = new ElectronWindowManager()
   const isEditMode = new SharedValue(false, 'isEditMode', wins)
-  const tray = new Tray(process.platform === 'darwin' ? iconTemplate : icon)
+  const tray = new Tray(process.platform === 'darwin' ? macTrayIcon : icon)
   const contextMenu = Menu.buildFromTemplate([{
     label: 'DevTool', type: 'normal', click: () => {
       wins.each(v => v.webContents.openDevTools())
@@ -95,13 +96,12 @@ app.whenReady().then(() => {
       app.quit()
     }
   }])
-  tray.setToolTip('黄瓜桌面挂件')
+  tray.setToolTip(__APP_NAME__)
   tray.setContextMenu(contextMenu)
   tray.addListener('click', () => {
     if (tray) tray.popUpContextMenu()
   })
   isEditMode.watch((editMode) => {
-    console.log('editMode changed', editMode)
     if (editMode) {
       wins.doSync('setIgnoreMouseEvents', false)
       wins.doSync('setFocusable', true)

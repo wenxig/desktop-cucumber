@@ -1,15 +1,19 @@
 <script setup lang='ts'>
 import Lv2d from '@renderer/components/lv2d.vue'
 import Stage from '@renderer/components/stage.vue'
-import { SharedValue } from '@renderer/helpers/ipc'
+import { shuffle } from 'lodash-es'
 import { ref } from 'vue'
-const isEditMode = (new SharedValue<boolean>('isEditMode')).toRef()
-
-const loadUrl = ref("/live2d_musumi/model.json")
+const known = [
+  'base',
+  'mujica',
+  'summer',
+  'winter'
+]
+const loadUrl = ref(`/live2d/musumi_${shuffle(known)[0]}/model.json`)
 </script>
 
 <template>
-  <Stage editable v-model:isEditMode="isEditMode">
-    <Lv2d v-model:isEditMode="isEditMode" v-model:loadUrl="loadUrl" />
+  <Stage>
+    <Lv2d v-model:loadUrl="loadUrl" editable />
   </Stage>
 </template>
