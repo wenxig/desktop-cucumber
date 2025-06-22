@@ -13,9 +13,9 @@ const stageStore = useStageStore()
       :class="[(stageStore.isEditMode ? false : stageStore.isTouchMode) ? 'bg-white/[0.7] backdrop-blur-none' : 'bg-white/[0] backdrop-blur-none']">
       <slot />
     </div>
-    <motion.div :style="{
+    <motion.div v-if="stageStore.isTouchMode" :style="{
       left: `${mouse.x}px`,
       top: `${mouse.y}px`
-    }" class="rounded-full absolute bg-green-300 size-8 -translate-x-1/2 -translate-y-1/2"></motion.div>
+    }" class="rounded-full absolute bg-green-300 size-8 pointer-events-none -translate-x-1/2 -translate-y-1/2"></motion.div>
   </AnimatePresence>
 </template>
