@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu, globalShortcut } from "electron"
 import { join } from "path"
-import { electronApp, optimizer, is } from "@electron-toolkit/utils"
+import { electronApp, optimizer, is, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import url from "url"
@@ -17,7 +17,6 @@ protocol.registerSchemesAsPrivileged([
 
 function createWindow() {
   const displayBounds = screen.getPrimaryDisplay().bounds
-  console.log('displayBounds', displayBounds)
   const win = new BrowserWindow({
     ...displayBounds,
     show: false,
@@ -77,18 +76,17 @@ app.whenReady().then(() => {
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-  if (process.platform === 'darwin') {
-    app.dock.hide()
-  }
+  app.dock?.hide()
   const wins = new ElectronWindowManager()
   const isEditMode = new SharedValue(false, 'isEditMode', wins)
-  const tray = new Tray(process.platform === 'darwin' ? macTrayIcon : icon)
+  const tray = new Tray(platform.isMacOS ? macTrayIcon : icon)
   const contextMenu = Menu.buildFromTemplate([{
     label: 'DevTool', type: 'normal', click: () => {
       wins.each(v => v.webContents.openDevTools())
     }
   }, {
     label: '编辑', type: 'normal', click: () => {
+      if (isTouchMode.value) return
       isEditMode.value = !isEditMode.value
     }
   }, {
@@ -102,6 +100,7 @@ app.whenReady().then(() => {
     if (tray) tray.popUpContextMenu()
   })
   isEditMode.watch((editMode) => {
+    isTouchMode.value = false
     if (editMode) {
       wins.doSync('setIgnoreMouseEvents', false)
       wins.doSync('setFocusable', true)
@@ -114,7 +113,7 @@ app.whenReady().then(() => {
 
 
   const isFullScreen = new SharedValue(false, 'isFullScreen', wins)
-  if (process.platform == 'win32') {
+  if (platform.isWindows) {
     const checkWindow = (w: Window) => {
       const windowb = w.getBounds()
       if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowb.height || !w.getTitle()) return false
@@ -125,13 +124,18 @@ app.whenReady().then(() => {
       console.log('                   ', w.path, '|', w.id, '|', w.processId, w.getTitle())
       return true
     }
-    isFullScreen.watch(()=>{
+    isFullScreen.watch(() => {
       wins.doSync('setBounds', displayBounds)
     })
     setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 5000)
     windowManager.addListener('window-activated', win => {
       isFullScreen.value = checkWindow(win)
     })
+
+    // isFullScreen.beforeBoot(() =>{
+    //   windowManager.emit('window-activated', windowManager.getActiveWindow())
+    //   console.log('booting');
+    // })
   }
   handleMessage({
     tiggerTaskBarHideStatue() {
@@ -141,13 +145,15 @@ app.whenReady().then(() => {
 
   const isTouchMode = new SharedValue(false, 'isTouchMode', wins)
   globalShortcut.register('shift+alt+e', () => {
+    if (isEditMode.value) return
     isTouchMode.value = !isTouchMode.value
+    console.log('globalShortcut -> change isTouchMode', isTouchMode.value)
   })
   isTouchMode.watch((isTouchMode) => {
-    console.log('touchMode changed', isTouchMode)
+    isEditMode.value = false
     if (isTouchMode) {
-      wins.doSync('setIgnoreMouseEvents', false)
-      wins.doSync('setFocusable', true)
+      // wins.doSync('setIgnoreMouseEvents', false)
+      // wins.doSync('setFocusable', true)
       wins.doSync('focus')
     } else {
       wins.doSync('setFocusable', false)
@@ -162,7 +168,7 @@ app.whenReady().then(() => {
   })
 })
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+  if (!platform.isMacOS) {
     app.quit()
   }
 })

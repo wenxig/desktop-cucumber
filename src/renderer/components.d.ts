@@ -8,8 +8,11 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AnimatePresence: typeof import('motion-v')['AnimatePresence']
     ButtonSlider: typeof import('./src/components/buttonSlider.vue')['default']
+    ButtonTextIcon: typeof import('./src/components/buttonTextIcon.vue')['default']
     ButtonTooltip: typeof import('./src/components/buttonTooltip.vue')['default']
+    Edit: typeof import('./src/components/edit.vue')['default']
     Lv2d: typeof import('./src/components/lv2d.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
     NIcon: typeof import('naive-ui')['NIcon']
@@ -21,5 +24,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Stage: typeof import('./src/components/stage.vue')['default']
+    Touch: typeof import('./src/components/touch.vue')['default']
   }
 }

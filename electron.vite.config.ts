@@ -1,11 +1,11 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
-import tailwindConfig from "./tailwind.config.ts"
-import tailwindcss from "tailwindcss"
+import tailwindcss from '@tailwindcss/vite'
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers"
 import Components from "unplugin-vue-components/vite"
 import vueJsx from '@vitejs/plugin-vue-jsx'
+import MotionResolver from 'motion-v/resolver'
 const appName = '黄瓜桌面挂件'
 export default defineConfig({
   main: {
@@ -30,19 +30,22 @@ export default defineConfig({
       vue(),
       vueJsx(),
       Components({
-        resolvers: [NaiveUiResolver()],
+        dts: true,
+        resolvers: [
+          NaiveUiResolver(),
+          MotionResolver()
+        ]
       }),
+      tailwindcss()
     ],
-    css: {
-      postcss: {
-        plugins: [tailwindcss(tailwindConfig)],
-      }
-    },
     experimental: <any>{
       enableNativePlugin: true
     },
     define: {
       __APP_NAME__: `'${appName}'`
+    },
+    css: {
+      transformer: 'lightningcss'
     }
   },
 })

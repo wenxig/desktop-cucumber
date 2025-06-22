@@ -32,6 +32,7 @@ export class SharedValue<T> {
     this.destroy = () => {
       ipcMain.removeHandler(channel)
       ipcMain.removeListener(bootChannel, handleValueBoot)
+      this.mitt.all.clear()
     }
   }
   get value() {
@@ -48,16 +49,20 @@ export class SharedValue<T> {
   private sync() {
     this.window.each(win => {
       win.webContents.send(`_sync_value_${this.name}_watch_`, this._value)
-      console.log(`sharedValue send`, `"_sync_value_${this.name}_watch_"`, this._value)
     })
     this.mitt.emit('watch', this._value)
   }
   private mitt = mitt<{
     watch: T
+    boot: undefined
   }>()
   public watch(fn: (v: T) => void) {
     this.mitt.on('watch', fn)
     return () => this.mitt.off('watch', fn)
+  }
+  public beforeBoot(fn: () => void) {
+    this.mitt.on('boot', fn)
+    return () => this.mitt.off('boot', fn)
   }
 }
 

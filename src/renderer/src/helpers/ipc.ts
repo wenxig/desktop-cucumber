@@ -13,7 +13,6 @@ export class SharedValue<T> {
       this.value = value
     })
     const handleLocalSync = ([name, value]: [name: string, value: SharedValue<any>]) => {
-      console.log('handleLocalSync', name, this.name, value)
       if (name != this.name || value == this) return
       this._value = value.value
       this.mitt.emit('watch', value.value)
@@ -47,7 +46,6 @@ export class SharedValue<T> {
     return this._value
   }
   set value(v) {
-    console.log('SharedValue.value(set)', this.name, v)
     this._value = v
     this.sync()
   }
@@ -57,7 +55,6 @@ export class SharedValue<T> {
   private sync() {
     this.mitt.emit('watch', this._value)
     sharedValueLocal.emit('changed', [this.name, this])
-    console.log('SharedValue.sync', this.name, this._value)
     window.inject.sharedValue.sync(this.name, this._value)
   }
   private mitt = mitt<{

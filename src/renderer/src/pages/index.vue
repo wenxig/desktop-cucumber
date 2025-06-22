@@ -9,11 +9,11 @@ const known = [
   'summer',
   'winter'
 ]
-const loadUrl = ref(`/live2d/musumi_${shuffle(known)[0]}/model.json`)
+const loadUrl = ref(`/live2d/musumi_${known[1]}/model.json`)
 </script>
 
 <template>
   <Stage>
-    <Lv2d v-model:loadUrl="loadUrl" editable />
+    <Lv2d v-model:loadUrl="loadUrl" controlable />
   </Stage>
 </template>

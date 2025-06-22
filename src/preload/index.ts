@@ -28,11 +28,7 @@ const inject: Inject = {
     },
     watch(name, cb) {
       const c = `_sync_value_${name}_watch_`
-      console.log('sharedValue watch r', `_sync_value_${name}_watch_`)
-      const handle = (_e: any, v: Parameters<typeof cb>[0]) => {
-        console.log('sharedValue watch onValue', `_sync_value_${name}_watch_`, v)
-        return cb(v)
-      }
+      const handle = (_e: any, v: Parameters<typeof cb>[0]) => cb(v)
       ipcRenderer.on(c, handle)
       return () => ipcRenderer.off(c, handle)
     },

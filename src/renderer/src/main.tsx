@@ -1,6 +1,6 @@
 import { createApp, defineComponent } from "vue"
 import App from "./App.vue"
-import "./index.scss"
+import "./index.css"
 import {
   NConfigProvider,
   NMessageProvider,
