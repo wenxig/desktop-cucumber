@@ -1,4 +1,4 @@
-import { get, isFunction, toPairs } from "lodash-es"
+import {  isFunction, toPairs } from "lodash-es"
 import { Inject, On } from "../preload/type"
 import { ipcMain, type BrowserWindow, type IpcMainEvent, type WebContents } from "electron"
 import mitt from "mitt"

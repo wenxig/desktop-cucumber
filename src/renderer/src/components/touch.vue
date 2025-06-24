@@ -1,5 +1,4 @@
 <script setup lang='ts'>
-import { SharedValue } from '@renderer/helpers/ipc'
 import { useStageStore } from '@renderer/stores/stage'
 import { toReactive, useMouse } from '@vueuse/core'
 import { motion } from 'motion-v'

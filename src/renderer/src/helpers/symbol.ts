@@ -1,6 +1,6 @@
 import type { Application } from "pixi.js"
-import type { InjectionKey } from "vue"
+import type { InjectionKey, Raw } from "vue"
 
 export namespace InjectKeys {
-  export const useStage: InjectionKey<() => Promise<[Application, HTMLCanvasElement]>> = Symbol('useStage')
+  export const useStage: InjectionKey<() => Promise<[Raw<Application>, Raw<HTMLCanvasElement>]>> = Symbol('useStage')
 }

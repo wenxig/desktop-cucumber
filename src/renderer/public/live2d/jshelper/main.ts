@@ -45,9 +45,9 @@ for (const url of (await fs.readdir(path_join(__dirname, '..'))).filter(n => n.i
 
   const useMotions = (define: DefineFile) => {
     for (const file of fillerFile('mtn', contentFileNames)) {
-      define.motions[file.split('.')[0]] = [{
+      (define.motions[file.split('.')[0].replace(/\d+/ig, '')] ??= []).push({
         file: path_join(relativeContentPath, file)
-      }]
+      })
     }
   }
   const useTexture = (define: DefineFile) => {

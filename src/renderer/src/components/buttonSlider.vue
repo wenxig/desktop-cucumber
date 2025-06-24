@@ -1,5 +1,4 @@
 <script setup lang='ts'>
-import ButtonTooltip from './buttonTooltip.vue'
 
 const modelValue = defineModel<number>({ required: true })
 defineProps<{

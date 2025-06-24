@@ -1,21 +1,21 @@
 <script setup lang='ts'>
 import { watch, shallowRef } from "vue"
 import { toReactive, useDraggable, useEventListener, useLocalStorage } from "@vueuse/core"
-import { SharedValue } from "@renderer/helpers/ipc"
 import { ModleConfig } from "@renderer/type"
 import { createMessageStore } from "@renderer/helpers/message"
-const isEditMode = new SharedValue<boolean>('isEditMode').toRef()
+import { useStageStore } from "@renderer/stores/stage"
+const stageStore = useStageStore()
 
 const editTooltips = createMessageStore([
   ['quit', ['按下[esc]或再次点击[编辑]退出编辑']],
   ['drag', ['左键按住屏幕滑动以调整位置']]
 ])
-watch(isEditMode, isEditMode => {
+watch(() => stageStore.isEditMode, isEditMode => {
   if (isEditMode) editTooltips.showAll()
   else editTooltips.closeAll()
 })
 useEventListener('keydown', e => {
-  if (e.key == 'Escape' && isEditMode.value) isEditMode.value = false
+  if (e.key == 'Escape' && stageStore.isEditMode) stageStore.isEditMode = false
 })
 
 const modelConfig = useLocalStorage<ModleConfig>('modelConfig', {
@@ -39,7 +39,7 @@ const configSetter = watch(() => positionSetterDragInstance.position, (position,
   if (y > 100) return
   modelConfig.value.y -= y
 })
-watch(isEditMode, isEditMode => {
+watch(() => stageStore.isEditMode, isEditMode => {
   if (isEditMode) {
     configSetter.resume()
     return
@@ -56,12 +56,13 @@ const resetPosition = () => {
 </script>
 
 <template>
-  <div :class="[isEditMode && 'bg-black/50']" class="right-0 size-full fixed bottom-0 transition-all bg-black/0">
+  <div :class="[stageStore.isEditMode && 'bg-black/50']"
+    class="right-0 size-full fixed bottom-0 transition-all bg-black/0">
     <slot />
-    <div v-if="isEditMode" :style="positionSetterDragInstance.style"
+    <div v-if="stageStore.isEditMode" :style="positionSetterDragInstance.style"
       class="size-[114514vw] -translate-x-1/2 -translate-y-1/2" ref="positionSetter">
     </div>
-    <NSpace class="absolute left-2 bottom-2" v-if="isEditMode">
+    <NSpace class="absolute left-2 bottom-2" v-if="stageStore.isEditMode">
       <ButtonTooltip name="重置位置" @click="resetPosition">
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
           <g fill="none">

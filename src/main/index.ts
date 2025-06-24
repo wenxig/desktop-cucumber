@@ -15,6 +15,15 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
+console.log('[versions report]')
+for (const name in process.versions) {
+  if (Object.prototype.hasOwnProperty.call(process.versions, name)) {
+    const version = process.versions[name]
+    console.log(name, ':', version)
+  }
+}
+console.log('[versions report end]')
+
 function createWindow() {
   const displayBounds = screen.getPrimaryDisplay().bounds
   const win = new BrowserWindow({
@@ -35,7 +44,7 @@ function createWindow() {
     hasShadow: false,
     enableLargerThanScreen: true,
     roundedCorners: false,
-    movable: false,         // ❌ 禁止移动窗口
+    // movable: false,         // ❌ 禁止移动窗口
     resizable: false,       // ❌ 禁止调整大小
     maximizable: false,     // ❌ 禁止最大化
   })
@@ -152,8 +161,8 @@ app.whenReady().then(() => {
   isTouchMode.watch((isTouchMode) => {
     isEditMode.value = false
     if (isTouchMode) {
-      // wins.doSync('setIgnoreMouseEvents', false)
-      // wins.doSync('setFocusable', true)
+      wins.doSync('setIgnoreMouseEvents', false)
+      wins.doSync('setFocusable', true)
       wins.doSync('focus')
     } else {
       wins.doSync('setFocusable', false)
