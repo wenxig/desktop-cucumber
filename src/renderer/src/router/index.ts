@@ -5,5 +5,8 @@ export const router = createRouter({
   routes: [{
     path: '/',
     component: () => import('../pages/index.vue')
+  }, {
+    path: '/init',
+    component: () => import('../pages/init.vue')
   }]
 })

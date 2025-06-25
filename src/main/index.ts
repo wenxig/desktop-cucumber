@@ -1,11 +1,11 @@
-import { app, shell, BrowserWindow, protocol, net, screen, Tray, Menu, globalShortcut } from "electron"
+import { app, shell, BrowserWindow, protocol, net, screen, globalShortcut } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
-import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import url from "url"
-import { ElectronWindowManager, handleMessage, SharedValue } from "./helper"
+import { WindowManager, handleMessage, SharedValue, TrayMenu } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
+import { MoudleManger } from "./moudleManager"
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "atom",
@@ -24,7 +24,9 @@ for (const name in process.versions) {
 }
 console.log('[versions report end]')
 
-function createWindow() {
+console.log('[MoudleManger.moudlesDirPath]', MoudleManger.moudlesDirPath)
+
+function createLive2dWindow() {
   const displayBounds = screen.getPrimaryDisplay().bounds
   const win = new BrowserWindow({
     ...displayBounds,
@@ -74,7 +76,35 @@ function createWindow() {
   }
   return win
 }
-app.whenReady().then(() => {
+
+
+function createInitWindow() {
+  const win = new BrowserWindow({
+    title: __APP_NAME__,
+    center: true,
+    icon,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.mjs"),
+      sandbox: false,
+    },
+    autoHideMenuBar: true
+  })
+  win.on("ready-to-show", () => {
+    win.show()
+  })
+  win.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+    return { action: "deny" }
+  })
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    win.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/init`)
+  } else {
+    win.loadFile(`${join(__dirname, "../renderer/index.html")}/init`)
+  }
+  return win
+}
+
+app.whenReady().then(async () => {
   const displayBounds = screen.getPrimaryDisplay().bounds
   protocol.handle("atom", (request) => {
     const filePath = decodeURIComponent(request.url.slice("atom://".length))
@@ -86,10 +116,11 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
   app.dock?.hide()
-  const wins = new ElectronWindowManager()
+  const wins = new WindowManager()
+  await MoudleManger.init(wins)
+
   const isEditMode = new SharedValue(false, 'isEditMode', wins)
-  const tray = new Tray(platform.isMacOS ? macTrayIcon : icon)
-  const contextMenu = Menu.buildFromTemplate([{
+  new TrayMenu([{
     label: 'DevTool', type: 'normal', click: () => {
       wins.each(v => v.webContents.openDevTools())
     }
@@ -103,20 +134,15 @@ app.whenReady().then(() => {
       app.quit()
     }
   }])
-  tray.setToolTip(__APP_NAME__)
-  tray.setContextMenu(contextMenu)
-  tray.addListener('click', () => {
-    if (tray) tray.popUpContextMenu()
-  })
   isEditMode.watch((editMode) => {
     isTouchMode.value = false
     if (editMode) {
-      wins.doSync('setIgnoreMouseEvents', false)
-      wins.doSync('setFocusable', true)
-      wins.doSync('focus')
+      wins.windows.get('live2d')?.setIgnoreMouseEvents(false)
+      wins.windows.get('live2d')?.setFocusable(true)
+      wins.windows.get('live2d')?.focus()
     } else {
-      wins.doSync('setFocusable', false)
-      wins.doSync('setIgnoreMouseEvents', true, { forward: true })
+      wins.windows.get('live2d')?.setFocusable(false)
+      wins.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
 
@@ -140,11 +166,6 @@ app.whenReady().then(() => {
     windowManager.addListener('window-activated', win => {
       isFullScreen.value = checkWindow(win)
     })
-
-    // isFullScreen.beforeBoot(() =>{
-    //   windowManager.emit('window-activated', windowManager.getActiveWindow())
-    //   console.log('booting');
-    // })
   }
   handleMessage({
     tiggerTaskBarHideStatue() {
@@ -161,20 +182,21 @@ app.whenReady().then(() => {
   isTouchMode.watch((isTouchMode) => {
     isEditMode.value = false
     if (isTouchMode) {
-      wins.doSync('setIgnoreMouseEvents', false)
-      wins.doSync('setFocusable', true)
-      wins.doSync('focus')
+      wins.windows.get('live2d')?.setIgnoreMouseEvents(false)
+      wins.windows.get('live2d')?.setFocusable(true)
+      wins.windows.get('live2d')?.focus()
     } else {
-      wins.doSync('setFocusable', false)
-      wins.doSync('setIgnoreMouseEvents', true, { forward: true })
+      wins.windows.get('live2d')?.setFocusable(false)
+      wins.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
-
-
-  wins.add(createWindow())
-  app.on("activate", function () {
-    if (BrowserWindow.getAllWindows().length === 0) wins.add(createWindow())
+  handleMessage({
+    moudleDone() {
+      wins.windows.get('init')?.close()
+      wins.add('live2d', createLive2dWindow())
+    }
   })
+  wins.add('init', createInitWindow())
 })
 app.on("window-all-closed", () => {
   if (!platform.isMacOS) {

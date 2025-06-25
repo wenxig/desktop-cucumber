@@ -75,8 +75,8 @@ watch(modelConfig, ({ rotate, x, y, scale }) => {
 
 
 
-// const headBox = shallowRef<HTMLDivElement>()
-// const bodyBox = shallowRef<HTMLDivElement>()
+const headBox = shallowRef<HTMLDivElement>()
+const bodyBox = shallowRef<HTMLDivElement>()
 const isHoveringModel = shallowRef(false)
 watch(model, model => {
   if (!model) return
@@ -88,17 +88,7 @@ watch(model, model => {
     isHoveringModel.value = false
     console.log('mouseleave')
   })
-  model.on('click',()=>{
-    window.$message.info('click')
-  })
-  model.on('clickcapture', () => {
-    window.$message.info('clickcapture')
-  })
-  model.on('tap', () => {
-    window.$message.info('tap')
-  })
 })
-watch(isHoveringModel, isHoveringModel => console.log(isHoveringModel))
 watch(() => [isHoveringModel.value, stageStore.isEditMode, stageStore.isTouchMode, $props.controlable] as const, debounce(([isHoveringModel, isEditMode, isTouchMode, controlable]) => {
   if (isEditMode || isTouchMode) {
     canvas.style.opacity = controlable ? '1' : '0.05'

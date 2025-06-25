@@ -1,6 +1,7 @@
 import type { Rectangle } from "electron"
 type Api = {
   tiggerTaskBarHideStatue: []
+  moudleDone: []
 }
 export type Inject = {
   api<T extends keyof Api>(k: T, ...args: Api[T]): void
@@ -16,4 +17,14 @@ export type On = {
   event: {
     'workspace-changed': [is: 'show' | 'hide']
   }
+}
+
+
+export interface MoudlesJson {
+  moudle: Moudle[]
+}
+export interface Moudle {
+  url: string,
+  type: 'github',
+  enable: boolean
 }
