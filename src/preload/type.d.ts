@@ -1,7 +1,7 @@
 import type { Rectangle } from "electron"
 type Api = {
   tiggerTaskBarHideStatue: []
-  moudleDone: []
+  moduleDone: []
 }
 export type Inject = {
   api<T extends keyof Api>(k: T, ...args: Api[T]): void
@@ -19,12 +19,13 @@ export type On = {
   }
 }
 
+import { IPackageJson } from 'package-json-type'
 
 export namespace DefineConfig {
-  export interface MoudlesJson {
-    moudle: Moudle[]
+  export interface ModulesJson {
+    module: Module[]
   }
-  export interface Moudle {
+  export interface Module {
     enable: boolean
     namespace: string
     origin: {
@@ -36,7 +37,7 @@ export namespace DefineConfig {
     desktopCucumber: Config
   }
   export interface Config {
-    moudle: ModuleConfig
+    module: ModuleConfig
     models: ModelDefine[]
   }
   export interface ModuleConfig {

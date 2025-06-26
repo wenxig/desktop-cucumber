@@ -3,9 +3,9 @@ import { join } from "path"
 import { electronApp, optimizer, is, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import url from "url"
-import {  handleMessage, SharedValue, TrayMenu } from "./helper"
+import { handleMessage, SharedValue, TrayMenu } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
-import { MoudleManger } from "./moudleManager"
+import { ModuleManger } from "./moduleManager"
 import { WindowManager } from "./windowManager"
 protocol.registerSchemesAsPrivileged([
   {
@@ -25,7 +25,7 @@ for (const name in process.versions) {
 }
 console.log('[versions report end]')
 
-console.log('[MoudleManger.moudlesDirPath]', MoudleManger.moudlesDirPath)
+console.log('[ModuleManger.modulesDirPath]', ModuleManger.modulesDirPath)
 
 function createLive2dWindow() {
   const displayBounds = screen.getPrimaryDisplay().bounds
@@ -117,7 +117,7 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
   app.dock?.hide()
-  await MoudleManger.init()
+  await ModuleManger.init()
 
   const isEditMode = new SharedValue(false, 'isEditMode')
   new TrayMenu([{
@@ -191,7 +191,7 @@ app.whenReady().then(async () => {
     }
   })
   handleMessage({
-    moudleDone() {
+    moduleDone() {
       WindowManager.windows.get('init')?.close()
       WindowManager.add('live2d', createLive2dWindow())
     }
