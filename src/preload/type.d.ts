@@ -20,11 +20,40 @@ export type On = {
 }
 
 
-export interface MoudlesJson {
-  moudle: Moudle[]
-}
-export interface Moudle {
-  url: string,
-  type: 'github',
-  enable: boolean
+export namespace DefineConfig {
+  export interface MoudlesJson {
+    moudle: Moudle[]
+  }
+  export interface Moudle {
+    enable: boolean
+    namespace: string
+    origin: {
+      from: string
+      url: string
+    }
+  }
+  export interface PackageJson extends IPackageJson {
+    desktopCucumber: Config
+  }
+  export interface Config {
+    moudle: ModuleConfig
+    models: ModelDefine[]
+  }
+  export interface ModuleConfig {
+    namespace: string
+    dispalyName: string
+    configVersion: number
+  }
+  export interface ModelDefine {
+    id: string
+    path: string
+    extends?: _ResourceLocation[]
+    name: string
+    hitbox?: boolean
+  }
+  export type _ResourceLocation = ResourceLocation | string
+  export interface ResourceLocation {
+    namespace: string
+    id: string
+  }
 }

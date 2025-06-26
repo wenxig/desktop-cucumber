@@ -6,7 +6,3 @@
 * {
   user-select: none;
 }
-
-html {
-  -electron-corner-smoothing: 0%;
-}

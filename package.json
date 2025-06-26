@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@vicons/material": "^0.13.0",
     "@vueuse/core": "^13.4.0",
     "lodash-es": "^4.17.21",
     "mitt": "^3.0.1",
@@ -29,6 +30,7 @@
     "pinia": "^3.0.1",
     "pixi-live2d-display-advanced": "^0.2.0",
     "pixi.js": "7.4.3",
+    "simple-git": "^3.28.0",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
@@ -44,6 +46,7 @@
     "electron-vite": "^3.0.0",
     "lightningcss": "^1.30.1",
     "nodegit": "^0.27.0",
+    "package-json-type": "^1.0.3",
     "tailwindcss": "4.1.10",
     "typescript": "^5.7.3",
     "unplugin-vue-components": "^28.4.1",

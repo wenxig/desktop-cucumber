@@ -6,6 +6,7 @@ import {
   NMessageProvider,
   NDialogProvider,
   NLoadingBarProvider,
+  NGlobalStyle,
   zhCN,
 } from "naive-ui"
 import { router } from "./router"
@@ -13,6 +14,7 @@ import { createPinia } from "pinia"
 
 const app = createApp(
   defineComponent(() => () => <NConfigProvider locale={zhCN} abstract>
+    <NGlobalStyle />
     <NLoadingBarProvider container-class="z-[200000]">
       <NDialogProvider>
         <NMessageProvider >

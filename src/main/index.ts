@@ -3,9 +3,10 @@ import { join } from "path"
 import { electronApp, optimizer, is, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import url from "url"
-import { WindowManager, handleMessage, SharedValue, TrayMenu } from "./helper"
+import {  handleMessage, SharedValue, TrayMenu } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
 import { MoudleManger } from "./moudleManager"
+import { WindowManager } from "./windowManager"
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "atom",
@@ -116,13 +117,12 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
   app.dock?.hide()
-  const wins = new WindowManager()
-  await MoudleManger.init(wins)
+  await MoudleManger.init()
 
-  const isEditMode = new SharedValue(false, 'isEditMode', wins)
+  const isEditMode = new SharedValue(false, 'isEditMode')
   new TrayMenu([{
     label: 'DevTool', type: 'normal', click: () => {
-      wins.each(v => v.webContents.openDevTools())
+      WindowManager.each(v => v.webContents.openDevTools())
     }
   }, {
     label: '编辑', type: 'normal', click: () => {
@@ -137,17 +137,17 @@ app.whenReady().then(async () => {
   isEditMode.watch((editMode) => {
     isTouchMode.value = false
     if (editMode) {
-      wins.windows.get('live2d')?.setIgnoreMouseEvents(false)
-      wins.windows.get('live2d')?.setFocusable(true)
-      wins.windows.get('live2d')?.focus()
+      WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(false)
+      WindowManager.windows.get('live2d')?.setFocusable(true)
+      WindowManager.windows.get('live2d')?.focus()
     } else {
-      wins.windows.get('live2d')?.setFocusable(false)
-      wins.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
+      WindowManager.windows.get('live2d')?.setFocusable(false)
+      WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
 
 
-  const isFullScreen = new SharedValue(false, 'isFullScreen', wins)
+  const isFullScreen = new SharedValue(false, 'isFullScreen')
   if (platform.isWindows) {
     const checkWindow = (w: Window) => {
       const windowb = w.getBounds()
@@ -160,7 +160,7 @@ app.whenReady().then(async () => {
       return true
     }
     isFullScreen.watch(() => {
-      wins.doSync('setBounds', displayBounds)
+      WindowManager.doSync('setBounds', displayBounds)
     })
     setInterval(() => windowManager.emit('window-activated', windowManager.getActiveWindow()), 5000)
     windowManager.addListener('window-activated', win => {
@@ -173,7 +173,7 @@ app.whenReady().then(async () => {
     }
   })
 
-  const isTouchMode = new SharedValue(false, 'isTouchMode', wins)
+  const isTouchMode = new SharedValue(false, 'isTouchMode')
   globalShortcut.register('shift+alt+e', () => {
     if (isEditMode.value) return
     isTouchMode.value = !isTouchMode.value
@@ -182,21 +182,21 @@ app.whenReady().then(async () => {
   isTouchMode.watch((isTouchMode) => {
     isEditMode.value = false
     if (isTouchMode) {
-      wins.windows.get('live2d')?.setIgnoreMouseEvents(false)
-      wins.windows.get('live2d')?.setFocusable(true)
-      wins.windows.get('live2d')?.focus()
+      WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(false)
+      WindowManager.windows.get('live2d')?.setFocusable(true)
+      WindowManager.windows.get('live2d')?.focus()
     } else {
-      wins.windows.get('live2d')?.setFocusable(false)
-      wins.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
+      WindowManager.windows.get('live2d')?.setFocusable(false)
+      WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
   handleMessage({
     moudleDone() {
-      wins.windows.get('init')?.close()
-      wins.add('live2d', createLive2dWindow())
+      WindowManager.windows.get('init')?.close()
+      WindowManager.add('live2d', createLive2dWindow())
     }
   })
-  wins.add('init', createInitWindow())
+  WindowManager.add('init', createInitWindow())
 })
 app.on("window-all-closed", () => {
   if (!platform.isMacOS) {

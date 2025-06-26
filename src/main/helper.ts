@@ -17,7 +17,7 @@ export const alertMessage = <T extends keyof On['event']>(win: WebContents, even
 
 export class SharedValue<T> {
   public destroy: () => void
-  constructor(private _value: T, public readonly name: string, private window: WindowManager) {
+  constructor(private _value: T, public readonly name: string) {
     const handleValueChange = (_e: any, value: T) => {
       if (this._value == value) return
       this._value = value
@@ -42,13 +42,13 @@ export class SharedValue<T> {
   set value(v) {
     if (this._value == v) return
     this._value = v
-    this.sync()
+    this.update()
   }
   public set(f: (v: T) => T) {
     this.value = f(this._value)
   }
-  private sync() {
-    this.window.each(win => {
+  public update() {
+    WindowManager.each(win => {
       win.webContents.send(`_sync_value_${this.name}_watch_`, this._value)
     })
     this.mitt.emit('watch', this._value)
@@ -77,6 +77,9 @@ export class RefValue<T> {
     this._value = v
     this.mitt.emit('watch', v)
   }
+  public update() {
+    this.mitt.emit('watch', this._value)
+  }
   public set(f: (v: T) => T) {
     this.value = f(this._value)
   }
@@ -89,44 +92,12 @@ export class RefValue<T> {
   }
 }
 
-export class WindowManager {
-  public windows = new Map<string, BrowserWindow>()
-  public add(key: string, win: BrowserWindow) {
-    this.windows.set(key, win)
-    win.once('closed', () => {
-      this.windows.delete(key)
-    })
-  }
-  public doSync<
-    K extends keyof BrowserWindow
-  >(
-    key: K,
-    ...args: BrowserWindow[K] extends (...args: infer A) => any ? A : never
-  ) {
-    const fn = (win: BrowserWindow) => {
-      const method = win[key]
-      if (isFunction(method)) {
-        (method as (...args: any[]) => any).apply(win, args)
-      }
-    }
-    for (const win of this.windows.values()) {
-      fn(win)
-    }
-  }
-  public each(f: (v: BrowserWindow) => void) {
-    for (const win of this.windows.values()) {
-      f(win)
-    }
-  }
-  public alertMessage<T extends keyof On['event']>(event: T, ...args: On['event'][T]) {
-    this.each(win => alertMessage(win.webContents, event, ...args))
-  }
-}
 
 
 import icon from "../../resources/iconWhite.png?asset"
 import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import { Menu, Tray } from "electron/main"
+import { WindowManager } from "./windowManager"
 export class TrayMenu {
   public menu: RefValue<(Electron.MenuItemConstructorOptions | Electron.MenuItem)[]>
   public tray: Tray
