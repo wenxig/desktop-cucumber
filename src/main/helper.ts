@@ -3,6 +3,11 @@ import { Inject, On } from "../preload/type"
 import { ipcMain, type BrowserWindow, type IpcMainEvent, type WebContents } from "electron"
 import mitt from "mitt"
 import { platform } from "@electron-toolkit/utils"
+import icon from "../../resources/iconWhite.png?asset"
+import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
+import { Menu, Tray } from "electron/main"
+import { WindowManager } from "./windowManager"
+import fs from "fs/promises"
 export const handleMessage = (
   list: Partial<{
     [K in keyof Inject['api']]: (...args: Parameters<Inject['api'][K]>) => Awaited<ReturnType<Inject['api'][K]>> | ReturnType<Inject['api'][K]>
@@ -94,10 +99,6 @@ export class RefValue<T> {
 
 
 
-import icon from "../../resources/iconWhite.png?asset"
-import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
-import { Menu, Tray } from "electron/main"
-import { WindowManager } from "./windowManager"
 export class TrayMenu {
   public menu: RefValue<(Electron.MenuItemConstructorOptions | Electron.MenuItem)[]>
   public tray: Tray
@@ -115,4 +116,16 @@ export class TrayMenu {
     const contextMenu = Menu.buildFromTemplate(this.menu.value)
     this.tray.setContextMenu(contextMenu)
   }
+}
+
+export namespace FsHelper {
+  export const isExists = async (path: string) => {
+    try {
+      await fs.access(path, fs.constants.W_OK | fs.constants.R_OK)
+    } catch {
+      return false
+    }
+    return true
+  }
+  export const readJsonFile = async <T extends object>(path: string, encoding: BufferEncoding = 'utf-8'): Promise<T> => JSON.parse((await fs.readFile(path)).toString(encoding))
 }

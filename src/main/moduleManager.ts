@@ -1,86 +1,135 @@
 import fs from "fs/promises"
 import path from 'path'
-import { SharedValue } from "./helper"
+import { FsHelper, SharedValue } from "./helper"
 import type { DefineConfig } from "../preload/type"
 import simpleGit from 'simple-git'
+import { difference, differenceBy, remove, uniqBy } from "lodash-es"
+import { app, dialog, net } from "electron"
+import { WindowManager } from "./windowManager"
 const coreModuleUrl = 'https://github.com/wenxig/desktop-cucumber_core'
+
 export namespace ModuleManger {
+  export namespace installBy {
+    export const github = async (url: string, saveDir: string) => {
+      console.log('[install][from github]', `${url}/raw/refs/heads/main/package.json`)
+      const content = <DefineConfig.PackageJson>await (await net.fetch(`${url}/raw/refs/heads/main/package.json`, { method: 'GET' })).json()
+      console.log('[install][from github]', 'package.json load done')
+      if (modules.value.module.find(v => v.namespace == content.desktopCucumber.module.namespace)) {
+        console.warn('Module was installed (install):', url)
+        return false
+      }
+      const aimPath = path.join(modulesDirPath, saveDir)
+      await simpleGit(modulesDirPath).clone(url, saveDir)
+      modules.set(v => {
+        v.module.push({
+          enable: false,
+          namespace: content.desktopCucumber.module.namespace,
+          origin: {
+            from: 'github',
+            url
+          },
+          localPath: aimPath,
+          package: content
+        })
+        v.module = uniqBy(v.module, v => v.namespace)
+        return v
+      })
+      return true
+    }
+    export const local = async (filePath: string, saveDir: string) => {
+      const content = await FsHelper.readJsonFile<DefineConfig.PackageJson>(path.join(filePath, 'package.json'))
+      if (modules.value.module.find(v => v.namespace == content.desktopCucumber.module.namespace)) {
+        console.warn('Module was installed (install):', filePath)
+        return false
+      }
+      const aimPath = path.join(modulesDirPath, saveDir)
+      await fs.cp(filePath, aimPath, { recursive: true })
+      modules.set(v => {
+        v.module.push({
+          enable: false,
+          namespace: content.desktopCucumber.module.namespace,
+          origin: {
+            from: 'local',
+            url: filePath
+          },
+          localPath: aimPath,
+          package: content
+        })
+        v.module = uniqBy(v.module, v => v.namespace)
+        return v
+      })
+      return true
+    }
+  }
+
   export const modulesDirPath = path.join(__dirname, 'appModules')
-  export const packageJsonPath = path.join(modulesDirPath, 'modules.json')
-  const Git = () => simpleGit(modulesDirPath)
+  export const modulesJsonPath = path.join(modulesDirPath, 'modules.json')
 
   export const modules = new SharedValue<DefineConfig.ModulesJson>({
     module: []
   }, 'modules')
-  export const modulePackage = new SharedValue<DefineConfig.PackageJson[]>([], 'modulePackage')
+  export const modulesBooting = new SharedValue<boolean>(true, 'modulesBooting')
 
   export const init = async () => {
     try {
-      await fs.access(modulesDirPath, fs.constants.W_OK | fs.constants.R_OK)
-    } catch {
-      await fs.mkdir(modulesDirPath)
+      console.log('[ModuleManager.init] run!')
+      modulesBooting.value = true
+      if (!await FsHelper.isExists(modulesDirPath)) await fs.mkdir(modulesDirPath)
+      process.chdir(modulesDirPath)
+      if (!await FsHelper.isExists(modulesJsonPath)) await fs.writeFile(modulesJsonPath, JSON.stringify(modules.value))
+      else modules.value = await FsHelper.readJsonFile(modulesJsonPath)
+      modules.watch(modules => fs.writeFile(modulesJsonPath, JSON.stringify(modules)))
+      console.log('[ModuleManager.init] dirs created')
+      await install(coreModuleUrl, 'github')
+      console.log('[ModuleManager.init] core installed')
+      const uninstalleds = await getUninstallModules()
+      console.log('[ModuleManager.init] find uninstalled:', uninstalleds)
+      await Promise.all(uninstalleds.map(({ origin: { url, from } }) => install(url, from)))
+      modulesBooting.value = false
+      console.log('[ModuleManager.init] done')
+    } catch (err: any) {
+      dialog.showErrorBox('人格初始化错误-无法连接到神经网络', err.toString())
+      process.exit(0)
     }
-    process.chdir(modulesDirPath)
-    try {
-      await fs.access(packageJsonPath, fs.constants.W_OK | fs.constants.R_OK)
-    } catch {
-      await fs.writeFile(packageJsonPath, JSON.stringify(modules.value))
-    }
-    modules.watch(modules => fs.writeFile(packageJsonPath, JSON.stringify(modules)))
-    await reloadAllPackageJson()
-
-    await install(coreModuleUrl, 'github')
   }
-  export const install = async (url: string, mode: 'github') => {
-    if (modules.value.module.find(v => v.origin.url == url)) {
-      console.warn('Module was installed', url)
-      return false
-    }
+  export const install = async (url: string, mode: DefineConfig.ModuleFrom) => {
+    const saveDir = url.split('/').at(-1)!
     switch (mode) {
       case 'github':
-        await installFromGithub(url)
+        await installBy.github(url, saveDir)
+        break
+      case "local":
+        await installBy.local(url, saveDir)
+        break
     }
-    await reloadAllPackageJson()
+    console.log('[install] done', url)
     return true
   }
-  const installFromGithub = async (url: string) => {
-    const name = url.split('/').at(-1)!
-    await Git().clone(url, name)
-    try {
-      await fs.writeFile(path.join(modulesDirPath, name, 'origin.txt'), `github\n${url}`)
-    } catch { }
+  export const uninstall = async (namespace: string) => {
+    const module = modules.value.module.find(v => v.namespace == namespace)
+    if (!module) {
+      console.warn('Module not find (uninstall):', namespace)
+      return false
+    }
+    await fs.rm(module.localPath, { force: true, recursive: true })
+    modules.set(v => {
+      remove(v.module, { namespace })
+      return v
+    })
+    return true
   }
-  export const reloadAllPackageJson = async () => {
-    const allModules = await fs.readdir(modulesDirPath)
-    for (const moduleDirName of allModules) {
+  const getUninstallModules = async () => {
+    const recodredModules = modules.value.module
+    const installedModulesDir = await fs.readdir(modulesDirPath)
+    const installedModules = new Set<string>()
+    for (const moduleDirName of installedModulesDir) {
       const basepath = path.join(modulesDirPath, moduleDirName)
       if (!(await fs.lstat(basepath)).isDirectory()) continue
-      try {
-        await fs.access(path.join(basepath, 'is-plugin'), fs.constants.W_OK | fs.constants.R_OK)
-      } catch {
-        continue
-      }
-      try {
-        const content = <DefineConfig.PackageJson>JSON.parse((await fs.readFile(path.join(basepath, 'package.json'))).toString('utf-8'))
-        const originRaw = <[from: string, url: string]>(await fs.readFile(path.join(basepath, 'origin.txt'))).toString('utf-8').split('\n')
-        modulePackage.value.push(content)
-        const old = modules.value.module.find(v => v.origin.url == originRaw[1])
-        modules.value.module.push({
-          enable: old?.enable ?? false,
-          namespace: content.desktopCucumber.module.namespace,
-          origin: {
-            from: originRaw[0],
-            url: originRaw[1]
-          }
-        })
-      } catch (error) {
-        console.error('Read Module Config Error', moduleDirName)
-        console.error(error)
-        throw error
-      }
+      const packageJsonPath = path.join(basepath, 'package.json')
+      if (!await FsHelper.isExists(packageJsonPath)) continue
+      const content = await FsHelper.readJsonFile<DefineConfig.PackageJson>(packageJsonPath)
+      installedModules.add(content.desktopCucumber.module.namespace)
     }
-    modules.update()
-    modulePackage.update()
-    console.log('reload all package json done', modules.value)
+    return recodredModules.filter(v => !installedModules.has(v.namespace))
   }
 }

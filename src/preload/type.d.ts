@@ -25,13 +25,16 @@ export namespace DefineConfig {
   export interface ModulesJson {
     module: Module[]
   }
+  export type ModuleFrom = 'github' | 'local'
   export interface Module {
-    enable: boolean
+    enable: false | number
     namespace: string
     origin: {
-      from: string
+      from: ModuleFrom
       url: string
-    }
+    },
+    localPath:string
+    package: PackageJson
   }
   export interface PackageJson extends IPackageJson {
     desktopCucumber: Config

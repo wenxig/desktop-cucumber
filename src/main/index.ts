@@ -80,6 +80,7 @@ function createLive2dWindow() {
 
 
 function createInitWindow() {
+  const displayBounds = screen.getPrimaryDisplay().bounds
   const win = new BrowserWindow({
     title: __APP_NAME__,
     center: true,
@@ -88,7 +89,10 @@ function createInitWindow() {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
     },
-    autoHideMenuBar: true
+    autoHideMenuBar: true,
+    closable: false,
+    height: displayBounds.height *0.8,
+    width: displayBounds.width *  0.1
   })
   win.on("ready-to-show", () => {
     win.show()
@@ -117,7 +121,6 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
   app.dock?.hide()
-  await ModuleManger.init()
 
   const isEditMode = new SharedValue(false, 'isEditMode')
   new TrayMenu([{
@@ -197,6 +200,7 @@ app.whenReady().then(async () => {
     }
   })
   WindowManager.add('init', createInitWindow())
+  await ModuleManger.init()
 })
 app.on("window-all-closed", () => {
   if (!platform.isMacOS) {
