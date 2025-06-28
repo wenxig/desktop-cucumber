@@ -4,10 +4,11 @@ import { Application } from "pixi.js"
 import { until } from "@vueuse/core"
 import { InjectKeys } from "@renderer/helpers/symbol"
 import { useStageStore } from "@renderer/stores/stage"
+import { InjectFunction } from "@renderer/helpers/ipc"
 
 const stageStore = useStageStore()
 
-window.inject.api('tiggerTaskBarHideStatue')
+InjectFunction.fromSync('tiggerTaskBarHideStatue')()
 const bgAlpha = computed(() =>
   stageStore.isEditMode ? 1 : 1
     - (stageStore.isFullScreen ? 0.3 : 0)
