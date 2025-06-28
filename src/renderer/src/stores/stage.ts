@@ -5,9 +5,9 @@ import { shallowReactive, type Raw } from "vue"
 
 export const useStageStore = defineStore('stageStore', () => {
   const stages = shallowReactive(new Map<symbol, Raw<Application> | undefined>())
-  const isTouchMode = new SharedValue<boolean>('isTouchMode')
-  const isEditMode = new SharedValue<boolean>('isEditMode')
-  const isFullScreen = new SharedValue<boolean>('isFullScreen')
+  const isTouchMode = new SharedValue('isTouchMode')
+  const isEditMode = new SharedValue('isEditMode')
+  const isFullScreen = new SharedValue('isFullScreen')
   return {
     stages,
     isTouchMode: isTouchMode.toRef(),

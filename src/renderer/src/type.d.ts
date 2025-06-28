@@ -1,5 +1,5 @@
 import { useMessage } from "naive-ui"
-import { Inject } from "../../preload/type"
+import { Inject } from "@preload/type"
 import * as PIXI from "pixi.js"
 declare global {
   interface Window {

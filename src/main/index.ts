@@ -90,9 +90,7 @@ function createInitWindow() {
       sandbox: false,
     },
     autoHideMenuBar: true,
-    closable: false,
-    height: displayBounds.height *0.8,
-    width: displayBounds.width *  0.1
+    closable: false
   })
   win.on("ready-to-show", () => {
     win.show()
@@ -206,4 +204,7 @@ app.on("window-all-closed", () => {
   if (!platform.isMacOS) {
     app.quit()
   }
+})
+app.on('before-quit', () => {
+  process.exit(0)
 })

@@ -1,6 +1,6 @@
-import { isFunction, toPairs } from "lodash-es"
-import { Inject, On } from "../preload/type"
-import { ipcMain, type BrowserWindow, type IpcMainEvent, type WebContents } from "electron"
+import { toPairs } from "lodash-es"
+import { Inject, On, type SharedValueType } from "@preload/type"
+import { ipcMain, type IpcMainEvent, type WebContents } from "electron"
 import mitt from "mitt"
 import { platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
@@ -20,10 +20,10 @@ export const handleMessage = (
 }
 export const alertMessage = <T extends keyof On['event']>(win: WebContents, event: T, ...args: On['event'][T]) => win.send(event, ...args)
 
-export class SharedValue<T> {
+export class SharedValue<T extends keyof SharedValueType> {
   public destroy: () => void
-  constructor(private _value: T, public readonly name: string) {
-    const handleValueChange = (_e: any, value: T) => {
+  constructor(private _value: SharedValueType[T], public readonly name: T) {
+    const handleValueChange = (_e: any, value: SharedValueType[T]) => {
       if (this._value == value) return
       this._value = value
       this.mitt.emit('watch', this._value)
@@ -49,8 +49,9 @@ export class SharedValue<T> {
     this._value = v
     this.update()
   }
-  public set(f: (v: T) => T) {
-    this.value = f(this._value)
+  public async set(f: (v: SharedValueType[T]) => Promise<SharedValueType[T]> | SharedValueType[T]) {
+    this._value = await f(this._value)
+    this.update()
   }
   public update() {
     WindowManager.each(win => {
@@ -59,10 +60,10 @@ export class SharedValue<T> {
     this.mitt.emit('watch', this._value)
   }
   private mitt = mitt<{
-    watch: T
+    watch: SharedValueType[T]
     boot: undefined
   }>()
-  public watch(fn: (v: T) => void) {
+  public watch(fn: (v: SharedValueType[T]) => void) {
     this.mitt.on('watch', fn)
     return () => this.mitt.off('watch', fn)
   }

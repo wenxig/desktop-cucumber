@@ -32,5 +32,16 @@
     "noFallthroughCasesInSwitch": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@renderer/*": [
+        "./src/renderer/src/*"
+      ],
+      "@preload/*": [
+        "./src/preload/*"
+      ],
+      "@main/*": [
+        "./src/main/*"
+      ],
+    }
   }
 }

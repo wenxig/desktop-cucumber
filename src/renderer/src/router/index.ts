@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router"
-
+import Init from "@renderer/pages/init/index.vue"
 export const router = createRouter({
   history: createWebHistory('/'),
   routes: [{
@@ -7,7 +7,7 @@ export const router = createRouter({
     component: () => import('../pages/view/index.vue')
   }, {
     path: '/init',
-    component: () => import('../pages/init/index.vue'),
+    component: Init,
     children: [{
       path: 'sort',
       component: () => import('../pages/init/sort.vue'),

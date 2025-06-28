@@ -26,14 +26,16 @@ export namespace DefineConfig {
     module: Module[]
   }
   export type ModuleFrom = 'github' | 'local'
+  export interface ModuleOrigin{
+    from: ModuleFrom
+    url: string
+  }
   export interface Module {
     enable: false | number
     namespace: string
-    origin: {
-      from: ModuleFrom
-      url: string
-    },
-    localPath:string
+    displayName: string
+    origin: ModuleOrigin,
+    localPath: string
     package: PackageJson
   }
   export interface PackageJson extends IPackageJson {
@@ -45,7 +47,7 @@ export namespace DefineConfig {
   }
   export interface ModuleConfig {
     namespace: string
-    dispalyName: string
+    displayName: string
     configVersion: number
   }
   export interface ModelDefine {
@@ -60,4 +62,13 @@ export namespace DefineConfig {
     namespace: string
     id: string
   }
+}
+
+export interface SharedValueType {
+  isEditMode: boolean
+  isFullScreen: boolean
+  isTouchMode: boolean
+
+  modules: DefineConfig.ModulesJson
+  modulesBooting: boolean
 }
