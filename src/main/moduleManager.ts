@@ -1,6 +1,6 @@
 import fs from "fs/promises"
 import path from 'path'
-import { FsHelper, SharedValue } from "./helper"
+import { FsHelper, InjectFunction, SharedValue } from "./helper"
 import type { DefineConfig } from "../preload/type"
 import simpleGit from 'simple-git'
 import { isEmpty, remove, spread, uniqBy } from "lodash-es"
@@ -24,9 +24,7 @@ export namespace ModuleManger {
     }
 
     export const github = async (url: string, saveDir: string) => {
-      console.log('[ModuleManger.install][from github]', `${url}/raw/refs/heads/main/package.json`)
-      const content = <DefineConfig.PackageJson>await (await net.fetch(`${url}/raw/refs/heads/main/package.json`, { method: 'GET' })).json()
-      console.log('[ModuleManger.install][from github]', 'package.json load done')
+      const content = await info(url, 'github')
       const aimPath = path.join(modulesDirPath, saveDir)
       await simpleGit(modulesDirPath).clone(url, saveDir)
       const origin: DefineConfig.ModuleOrigin = {
@@ -37,9 +35,7 @@ export namespace ModuleManger {
     }
 
     export const local = async (filePath: string, saveDir: string) => {
-      console.log('[ModuleManger.install][from local]', path.join(filePath, 'package.json'))
-      const content = await FsHelper.readJsonFile<DefineConfig.PackageJson>(path.join(filePath, 'package.json'))
-      console.log('[ModuleManger.install][from local]', 'package.json load done')
+      const content = await info(filePath, 'local')
       const aimPath = path.join(modulesDirPath, saveDir)
       await fs.cp(filePath, aimPath, { recursive: true })
       const origin: DefineConfig.ModuleOrigin = {
@@ -53,10 +49,10 @@ export namespace ModuleManger {
   export const modulesDirPath = import.meta.env.DEV ? path.join(__dirname, '../../_temp', 'appModules') : path.join(__dirname, 'appModules')
   export const modulesJsonPath = path.join(modulesDirPath, 'modules.json')
 
-  export const modules = new SharedValue({
+  export const modules = new SharedValue('modules', {
     module: []
-  }, 'modules')
-  export const modulesBooting = new SharedValue(true, 'modulesBooting')
+  })
+  export const modulesBooting = new SharedValue('modulesBooting', true)
 
   export const init = async () => {
     try {
@@ -90,7 +86,32 @@ export namespace ModuleManger {
       throw err
     }
   }
-  export const install = async (url: string, mode: DefineConfig.ModuleFrom) => {
+
+  export const info = InjectFunction.from('ModuleManager.info', async (url: string, mode: DefineConfig.ModuleFrom) => {
+    try {
+      switch (mode) {
+        case "github":
+          console.log('[ModuleManger.info][from github]', `${url}/raw/refs/heads/main/package.json`)
+          var content = <DefineConfig.PackageJson>await (await net.fetch(`${url}/raw/refs/heads/main/package.json`, { method: 'GET' })).json()
+          console.log('[ModuleManger.info][from github]', 'package.json load done')
+          return content
+        case "local":
+          console.log('[ModuleManger.info][from local]', path.join(url, 'package.json'))
+          var content = await FsHelper.readJsonFile<DefineConfig.PackageJson>(path.join(url, 'package.json'))
+          console.log('[ModuleManger.info][from local]', 'package.json load done')
+          return content
+        default:
+          dialog.showErrorBox('神经网络检索错误-神经断链', `Method not matched: ${mode}`)
+          throw `Method not matched: ${mode}`
+      }
+    } catch (err) {
+      if (!(err instanceof Error)) throw err
+      dialog.showErrorBox('神经网络检索错误-人格不存在', err.stack ?? err.message)
+      throw err
+    }
+  })
+
+  export const install = InjectFunction.from('ModuleManger.install', async (url: string, mode: DefineConfig.ModuleFrom) => {
     const saveDir = url.split('/').at(-1)!
     switch (mode) {
       case 'github':
@@ -102,8 +123,9 @@ export namespace ModuleManger {
     }
     console.log('[ModuleManger.install] done', url)
     return true
-  }
-  export const uninstall = async (namespace: string) => {
+  })
+
+  export const uninstall = InjectFunction.from('ModuleManger.uninstall', async (namespace: string) => {
     const module = modules.value.module.find(v => v.namespace == namespace)
     if (!module) {
       console.warn('Module not find (uninstall):', namespace)
@@ -115,7 +137,8 @@ export namespace ModuleManger {
       return v
     })
     return true
-  }
+  })
+
   const getUninstallModules = async () => {
     const recodredModules = modules.value.module
     const installedModulesDir = await fs.readdir(modulesDirPath)

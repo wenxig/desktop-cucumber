@@ -1,16 +1,16 @@
 import { onUnmounted, ref, watch, type Ref } from "vue"
 import mitt from 'mitt'
-import type { SharedValueType } from "@preload/type"
+import type { InjectFunctionType, SharedValueType } from "@preload/type"
 
 const sharedValueLocal = mitt<{
   changed: [name: string, value: SharedValue<any>]
 }>()
-export class SharedValue<T extends keyof SharedValueType> {
-  private _value: SharedValueType[T]
+export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T]> {
+  private _value: VT
   public destroy: () => void
   constructor(public readonly name: T) {
-    this._value = window.inject.sharedValue.boot<SharedValueType[T]>(name)
-    const stopSync = window.inject.sharedValue.watch<SharedValueType[T]>(name, value => {
+    this._value = window.inject.sharedValue.boot<VT>(name)
+    const stopSync = window.inject.sharedValue.watch<VT>(name, value => {
       this.value = value
     })
     const handleLocalSync = ([name, value]: [name: string, value: SharedValue<any>]) => {
@@ -41,28 +41,53 @@ export class SharedValue<T extends keyof SharedValueType> {
       stopRawWatch()
       this.destroy()
     })
-    return v as Ref<SharedValueType[T], SharedValueType[T]>
+    return v as Ref<VT, VT>
   }
   get value() {
     return this._value
   }
   set value(v) {
+    if (this._value == v) return
     this._value = v
-    this.sync()
+    this.update()
   }
-  public set(f: (v: SharedValueType[T]) => SharedValueType[T]) {
-    this.value = f(this._value)
+  public set(f: (v: VT) => VT) {
+    this._value = f(this._value)
+    this.update()
   }
-  private sync() {
+  private update() {
     this.mitt.emit('watch', this._value)
     sharedValueLocal.emit('changed', [this.name, this])
     window.inject.sharedValue.sync(this.name, this._value)
   }
   private mitt = mitt<{
-    watch: SharedValueType[T]
+    watch: VT
   }>()
-  public watch(fn: (v: SharedValueType[T]) => void) {
+  public watch(fn: (v: VT) => void) {
     this.mitt.on('watch', fn)
     return () => this.mitt.off('watch', fn)
+  }
+}
+
+
+export class InjectFunction<T extends keyof InjectFunctionType, FT extends (...args: any) => any = InjectFunctionType[T]> {
+  constructor(public readonly name: T) { }
+  public sync(...p: Parameters<FT>): ReturnType<Awaited<FT>> {
+    const r = window.inject.injectFunction.sync(this.name, p)
+    if (r.isError) throw r.result
+    return r.result
+  }
+  public async call(...p: Parameters<FT>): Promise<ReturnType<FT>> {
+    const r = await window.inject.injectFunction.call(this.name, p)
+    if (r.isError) throw r.result
+    return r.result
+  }
+  public static from<T extends keyof InjectFunctionType, FT extends (...args: any) => any = InjectFunctionType[T]>(name: T) {
+    const injectFunction = new InjectFunction(name)
+    return (...p: Parameters<FT>) => injectFunction.call(...p)
+  }
+  public static fromSync<T extends keyof InjectFunctionType, FT extends (...args: any) => any = InjectFunctionType[T]>(name: T) {
+    const injectFunction = new InjectFunction(name)
+    return (...p: Parameters<FT>) => injectFunction.sync(...p)
   }
 }

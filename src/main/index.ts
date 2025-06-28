@@ -3,10 +3,13 @@ import { join } from "path"
 import { electronApp, optimizer, is, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import url from "url"
-import { handleMessage, SharedValue, TrayMenu } from "./helper"
+import { InjectFunction, SharedValue, TrayMenu } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
 import { ModuleManger } from "./moduleManager"
 import { WindowManager } from "./windowManager"
+Error.prototype.toJSON = function () {
+  return JSON.parse(JSON.stringify(this))
+}
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "atom",
@@ -80,7 +83,7 @@ function createLive2dWindow() {
 
 
 function createInitWindow() {
-  const displayBounds = screen.getPrimaryDisplay().bounds
+  new SharedValue('platform', platform)
   const win = new BrowserWindow({
     title: __APP_NAME__,
     center: true,
@@ -120,7 +123,7 @@ app.whenReady().then(async () => {
   })
   app.dock?.hide()
 
-  const isEditMode = new SharedValue(false, 'isEditMode')
+  const isEditMode = new SharedValue('isEditMode', false)
   new TrayMenu([{
     label: 'DevTool', type: 'normal', click: () => {
       WindowManager.each(v => v.webContents.openDevTools())
@@ -148,7 +151,7 @@ app.whenReady().then(async () => {
   })
 
 
-  const isFullScreen = new SharedValue(false, 'isFullScreen')
+  const isFullScreen = new SharedValue('isFullScreen', false)
   if (platform.isWindows) {
     const checkWindow = (w: Window) => {
       const windowb = w.getBounds()
@@ -168,13 +171,9 @@ app.whenReady().then(async () => {
       isFullScreen.value = checkWindow(win)
     })
   }
-  handleMessage({
-    tiggerTaskBarHideStatue() {
-      windowManager.emit('window-activated', windowManager.getActiveWindow())
-    }
-  })
+  new InjectFunction('tiggerTaskBarHideStatue', () => windowManager.emit('window-activated', windowManager.getActiveWindow()))
 
-  const isTouchMode = new SharedValue(false, 'isTouchMode')
+  const isTouchMode = new SharedValue('isTouchMode', false)
   globalShortcut.register('shift+alt+e', () => {
     if (isEditMode.value) return
     isTouchMode.value = !isTouchMode.value
@@ -191,11 +190,19 @@ app.whenReady().then(async () => {
       WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
-  handleMessage({
-    moduleDone() {
-      WindowManager.windows.get('init')?.close()
-      WindowManager.add('live2d', createLive2dWindow())
-    }
+  // handleMessage({
+  //   moduleDone() {
+  //     WindowManager.windows.get('init')?.close()
+  //     WindowManager.add('live2d', createLive2dWindow())
+  //   }
+  // })
+  InjectFunction.from('test', (...p) => {
+    return ['test', p]
+  })
+  InjectFunction.from('testError', (...p) => {
+    throw new Error('testError', {
+      cause: ['test', p]
+    })
   })
   WindowManager.add('init', createInitWindow())
   await ModuleManger.init()

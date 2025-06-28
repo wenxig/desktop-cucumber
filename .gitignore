@@ -5,4 +5,4 @@ out
 .eslintcache
 *.log*
 resources/win32_helpers/target/*
-_temp
+_temp/*

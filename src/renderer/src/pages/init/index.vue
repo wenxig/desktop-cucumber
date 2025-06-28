@@ -38,7 +38,7 @@ watch(isBooting, isBooting => {
   <NSpin class="!h-full *:!h-full" :show="isBooting">
     <NSpace vertical class="!h-full *:!h-full" justify="center">
       <NLayout class="!h-full">
-        <NLayoutHeader class="border-b-1 !h-8 flex items-center pl-8 font-bold text-lg" bordered>人格配置</NLayoutHeader>
+        <NLayoutHeader class="border-b-1 !h-8 flex items-center pl-8 font-bold text-lg" bordered>神经网络终端</NLayoutHeader>
         <NLayout has-sider class="!h-[calc(100%-32px)]">
           <NLayoutSider class="!h-full" bordered collapse-mode="width" :collapsed :collapsed-width="64" :width="160"
             show-trigger @collapse="collapsed = true" @expand="collapsed = false">

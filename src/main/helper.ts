@@ -1,6 +1,5 @@
-import { toPairs } from "lodash-es"
-import { Inject, On, type SharedValueType } from "@preload/type"
-import { ipcMain, type IpcMainEvent, type WebContents } from "electron"
+import type { On, InjectFunctionResult, InjectFunctionType, SharedValueType } from "@preload/type"
+import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from "electron"
 import mitt from "mitt"
 import { platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
@@ -8,22 +7,44 @@ import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import { Menu, Tray } from "electron/main"
 import { WindowManager } from "./windowManager"
 import fs from "fs/promises"
-export const handleMessage = (
-  list: Partial<{
-    [K in keyof Inject['api']]: (...args: Parameters<Inject['api'][K]>) => Awaited<ReturnType<Inject['api'][K]>> | ReturnType<Inject['api'][K]>
-  }>
-) => {
-  const pairs = toPairs(list)
-  for (const pair of pairs) {
-    ipcMain.handle(pair[0], (_e, ...arg) => (pair[1] as any)(...arg))
-  }
-}
 export const alertMessage = <T extends keyof On['event']>(win: WebContents, event: T, ...args: On['event'][T]) => win.send(event, ...args)
 
-export class SharedValue<T extends keyof SharedValueType> {
+
+
+export class RefValue<T> {
+  constructor(protected _value: T) { }
+  get value() {
+    return this._value
+  }
+  set value(v) {
+    if (this._value == v) return
+    this._value = v
+    this.update()
+  }
+  public update() {
+    this.mitt.emit('watch', this._value)
+  }
+  public async set(f: (v: T) => T | Promise<T>) {
+    this.value = await f(this._value)
+    this.update()
+  }
+  protected mitt = mitt<{
+    watch: T
+  }>()
+  public watch(fn: (v: T) => void) {
+    this.mitt.on('watch', fn)
+    return () => this.mitt.off('watch', fn)
+  }
+}
+
+const sharedValueLocal = mitt<{
+  changed: [name: string, value: SharedValue<any>]
+}>()
+export class SharedValue<T extends keyof SharedValueType, VT extends SharedValueType[T] = SharedValueType[T]> extends RefValue<VT> {
   public destroy: () => void
-  constructor(private _value: SharedValueType[T], public readonly name: T) {
-    const handleValueChange = (_e: any, value: SharedValueType[T]) => {
+  constructor(public readonly name: T, _value: SharedValueType[T]) {
+    super(<VT>_value)
+    const handleValueChange = (_e: any, value: VT) => {
       if (this._value == value) return
       this._value = value
       this.mitt.emit('watch', this._value)
@@ -35,71 +56,29 @@ export class SharedValue<T extends keyof SharedValueType> {
     const bootChannel = `${channel}boot_`
     ipcMain.addListener(bootChannel, handleValueBoot)
 
+
+    const handleLocalSync = ([name, value]: [name: string, value: SharedValue<any>]) => {
+      if (name != this.name || value == this) return
+      this._value = value.value
+      this.mitt.emit('watch', value.value)
+    }
+    sharedValueLocal.on('changed', handleLocalSync)
+
     this.destroy = () => {
       ipcMain.removeHandler(channel)
       ipcMain.removeListener(bootChannel, handleValueBoot)
       this.mitt.all.clear()
+      sharedValueLocal.off('changed', handleLocalSync)
     }
   }
-  get value() {
-    return this._value
-  }
-  set value(v) {
-    if (this._value == v) return
-    this._value = v
-    this.update()
-  }
-  public async set(f: (v: SharedValueType[T]) => Promise<SharedValueType[T]> | SharedValueType[T]) {
-    this._value = await f(this._value)
-    this.update()
-  }
-  public update() {
+  public override update() {
+    this.mitt.emit('watch', this._value)
+    sharedValueLocal.emit('changed', [this.name, this])
     WindowManager.each(win => {
       win.webContents.send(`_sync_value_${this.name}_watch_`, this._value)
     })
-    this.mitt.emit('watch', this._value)
-  }
-  private mitt = mitt<{
-    watch: SharedValueType[T]
-    boot: undefined
-  }>()
-  public watch(fn: (v: SharedValueType[T]) => void) {
-    this.mitt.on('watch', fn)
-    return () => this.mitt.off('watch', fn)
-  }
-  public beforeBoot(fn: () => void) {
-    this.mitt.on('boot', fn)
-    return () => this.mitt.off('boot', fn)
   }
 }
-
-export class RefValue<T> {
-  constructor(private _value: T) { }
-  get value() {
-    return this._value
-  }
-  set value(v) {
-    if (this._value == v) return
-    this._value = v
-    this.mitt.emit('watch', v)
-  }
-  public update() {
-    this.mitt.emit('watch', this._value)
-  }
-  public set(f: (v: T) => T) {
-    this.value = f(this._value)
-  }
-  private mitt = mitt<{
-    watch: T
-  }>()
-  public watch(fn: (v: T) => void) {
-    this.mitt.on('watch', fn)
-    return () => this.mitt.off('watch', fn)
-  }
-}
-
-
-
 export class TrayMenu {
   public menu: RefValue<(Electron.MenuItemConstructorOptions | Electron.MenuItem)[]>
   public tray: Tray
@@ -129,4 +108,51 @@ export namespace FsHelper {
     return true
   }
   export const readJsonFile = async <T extends object>(path: string, encoding: BufferEncoding = 'utf-8'): Promise<T> => JSON.parse((await fs.readFile(path)).toString(encoding))
+}
+
+export class InjectFunction<T extends keyof InjectFunctionType, FT extends (...args: any[]) => any = InjectFunctionType[T]> {
+  public destroy: () => void
+  constructor(public readonly name: T, protected fun: FT) {
+    const channel = `_call_function_${name}_`
+    const handleCallFunction = async (_e: IpcMainInvokeEvent, [p]: [Parameters<FT>]): Promise<InjectFunctionResult<ReturnType<FT>>> => {
+      console.log(channel, p)
+      try {
+        return {
+          isError: false,
+          result: await fun(...p)
+        }
+      } catch (error) {
+        return {
+          isError: true,
+          result: error
+        }
+      }
+    }
+    ipcMain.handle(channel, handleCallFunction)
+
+    const channelSync = `_call_function_sync_${name}_`
+    const handleCallFunctionSync = async (e: IpcMainEvent, [p]: [Parameters<FT>]): Promise<InjectFunctionResult<ReturnType<FT>>> => {
+      try {
+        return e.returnValue = {
+          isError: false,
+          result: await fun(...p)
+        }
+      } catch (error) {
+        return e.returnValue = {
+          isError: true,
+          result: error
+        } as const
+      }
+    }
+    ipcMain.addListener(channelSync, handleCallFunctionSync)
+
+    this.destroy = () => {
+      ipcMain.removeHandler(channel)
+      ipcMain.removeListener(channelSync, handleCallFunctionSync)
+    }
+  }
+  public static from<T extends keyof InjectFunctionType, FT extends InjectFunctionType[T] = InjectFunctionType[T]>(name: T, fun: FT) {
+    new InjectFunction(name, fun)
+    return fun
+  }
 }

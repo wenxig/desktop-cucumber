@@ -1,24 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { Inject } from "./type"
 
-
-const event: Inject['event'] = (e, cb) => {
-  const handle = (_: any, ...agrs: Parameters<typeof cb>) => cb(...agrs)
-  ipcRenderer.on(e, handle)
-  return () => ipcRenderer.off(e, handle)
-}
-
-
-
-
 const inject: Inject = {
-  api: (p, ...args) => {
-    try {
-      ipcRenderer.invoke(p, ...args)
-    } catch (error) {
-      console.warn(error)
-    }
-  },
   sharedValue: {
     boot(name) {
       return ipcRenderer.sendSync(`_sync_value_${name}_boot_`)
@@ -33,7 +16,19 @@ const inject: Inject = {
       return () => ipcRenderer.off(c, handle)
     },
   },
-  event
+  injectFunction: {
+    call(name, ...p) {
+      return ipcRenderer.invoke(`_call_function_${name}_`, p)
+    },
+    sync(name, ...p) {
+      return ipcRenderer.sendSync(`_call_function_sync_${name}_`, p)
+    },
+  },
+  event(e, cb) {
+    const handle = (_: any, ...agrs: Parameters<typeof cb>) => cb(...agrs)
+    ipcRenderer.on(e, handle)
+    return () => ipcRenderer.off(e, handle)
+  }
 }
 
 if (process.contextIsolated) {

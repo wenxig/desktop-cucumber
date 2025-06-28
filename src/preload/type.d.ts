@@ -1,14 +1,18 @@
+import type { Platform } from "@electron-toolkit/utils"
 import type { Rectangle } from "electron"
 type Api = {
   tiggerTaskBarHideStatue: []
   moduleDone: []
 }
 export type Inject = {
-  api<T extends keyof Api>(k: T, ...args: Api[T]): void
   sharedValue: {
     sync(name: string, v: any): void
     boot<T>(name: string): T
     watch<T>(name: string, cb: (v: T) => void): () => void
+  }
+  injectFunction: {
+    sync(name: string, ...v: any[]): InjectFunctionResult<Awaited<any>>
+    call(name: string, ...v: any[]): Promise<InjectFunctionResult<any>>
   }
   event<T extends keyof On['event']>(event: T, callback: (...p: On['event'][T]) => void): () => void
 }
@@ -26,7 +30,7 @@ export namespace DefineConfig {
     module: Module[]
   }
   export type ModuleFrom = 'github' | 'local'
-  export interface ModuleOrigin{
+  export interface ModuleOrigin {
     from: ModuleFrom
     url: string
   }
@@ -71,4 +75,23 @@ export interface SharedValueType {
 
   modules: DefineConfig.ModulesJson
   modulesBooting: boolean
+
+  platform: Platform
+}
+
+export type InjectFunctionResult<T> = {
+  isError: false
+  result: T
+} | {
+  isError: true
+  result: unknown
+}
+export interface InjectFunctionType {
+  "ModuleManager.info": (url: string, mode: DefineConfig.ModuleFrom) => Promise<DefineConfig.PackageJson>
+  "ModuleManger.install": (url: string, mode: DefineConfig.ModuleFrom) => Promise<boolean>
+  "ModuleManger.uninstall": (namespace: string) => Promise<boolean>
+  tiggerTaskBarHideStatue: () => boolean
+
+  test: (...args: any[]) => any
+  testError: (...args: any[]) => void
 }
