@@ -38,6 +38,7 @@ export namespace DefineConfig {
     origin: ModuleOrigin,
     localPath: string
     package: PackageJson
+    closeable: boolean
   }
   export interface PackageJson extends IPackageJson {
     desktopCucumber: Config
@@ -72,6 +73,7 @@ export interface SharedValueType {
 
   modules: DefineConfig.ModulesJson
   modulesBooting: boolean | Error
+  modulesErrors: [name: string, error: Error][]
 
   platform: Platform
 }
@@ -84,14 +86,10 @@ export type InjectFunctionResult<T> = {
   result: unknown
 }
 export interface InjectFunctionType {
-  "ModuleManager.info"(url: string, mode: 'github', fork: string): Promise<DefineConfig.PackageJson>
-  "ModuleManager.info"(url: string, mode: 'local'): Promise<DefineConfig.PackageJson>
-  "ModuleManger.install"(url: string, mode: 'github', fork: string): Promise<boolean>
-  "ModuleManger.install"(url: string, mode: 'local'): Promise<boolean>
+  "ModuleManager.info"(url: string, mode: DefineConfig.ModuleFrom, fork?: string): Promise<DefineConfig.PackageJson | false>
+  "ModuleManger.install"(url: string, mode: DefineConfig.ModuleFrom, fork?: string): Promise<boolean>
   "ModuleManger.uninstall"(namespace: string): Promise<boolean>
   "ModuleManger.gitLsRemote"(url: string): Promise<string[]>
   triggerTaskBarHideStatue(): boolean
 
-  test: AnyFn
-  testError: (...args: any[]) => void
 }

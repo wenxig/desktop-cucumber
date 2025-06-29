@@ -1,14 +1,14 @@
 <script setup lang='ts'>
 import { SharedValue } from '@renderer/helpers/ipc'
 import { SettingsInputComponentRound } from '@vicons/material'
-
+import {isNumber}from 'lodash-es'
 const modules = new SharedValue('modules').toRef()
 </script>
 
 <template>
   <NScrollbar class="size-full">
     <TransitionGroup tag="ul" name="list">
-      <NAlert v-for="m of modules.module" :key="m.namespace" :title="m.displayName" type="default"
+      <NAlert v-for="m of modules.module" :key="m.namespace" :title="m.displayName" :type="isNumber(m.enable)?'success':'default'"
         class="w-[90%] mx-auto mt-1">
         <template #icon>
           <SettingsInputComponentRound />

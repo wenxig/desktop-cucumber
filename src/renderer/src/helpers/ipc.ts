@@ -73,12 +73,12 @@ export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T
 export class InjectFunction<T extends keyof InjectFunctionType, FT extends (...args: any) => any = InjectFunctionType[T]> {
   constructor(public readonly name: T) { }
   public sync(...p: Parameters<FT>): ReturnType<Awaited<FT>> {
-    const r = window.inject.injectFunction.sync(this.name, p)
+    const r = window.inject.injectFunction.sync(this.name, ...p)
     if (r.isError) throw r.result
     return r.result
   }
   public async call(...p: Parameters<FT>): Promise<ReturnType<FT>> {
-    const r = await window.inject.injectFunction.call(this.name, p)
+    const r = await window.inject.injectFunction.call(this.name, ...p)
     if (r.isError) throw r.result
     return r.result
   }

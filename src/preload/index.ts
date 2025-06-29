@@ -25,7 +25,7 @@ const inject: Inject = {
     },
   },
   event(e, cb) {
-    const handle = (_: any, ...agrs: Parameters<typeof cb>) => cb(...agrs)
+    const handle = (_: any, ...args: Parameters<typeof cb>) => cb(...args)
     ipcRenderer.on(e, handle)
     return () => ipcRenderer.off(e, handle)
   }

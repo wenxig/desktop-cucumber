@@ -1,22 +1,21 @@
-import { app, shell, BrowserWindow, protocol, net, screen, globalShortcut } from "electron"
+import { app, BrowserWindow, protocol, net, screen, globalShortcut } from "electron"
 import { join } from "path"
-import { electronApp, optimizer, is, platform } from "@electron-toolkit/utils"
+import { electronApp, optimizer, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import url from "url"
-import { InjectFunction, SharedValue, TrayMenu } from "./helper"
+import { InjectFunction, SharedValue, TrayMenu, useProtocolProxy, WindowHelper } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
 import { ModuleManger } from "./moduleManager"
 import { WindowManager } from "./windowManager"
 Error.prototype.toJSON = function () {
   return JSON.parse(JSON.stringify(this))
 }
-protocol.registerSchemesAsPrivileged([
-  {
-    scheme: "atom",
-    privileges: {
-      supportFetchAPI: true,
-    },
-  },
+const applyProxy = useProtocolProxy([
+  ['atom', request => {
+    const filePath = decodeURIComponent(request.url.slice("atom://".length))
+    console.log("[atom request]", filePath)
+    return net.fetch(url.pathToFileURL(filePath).toString())
+  }]
 ])
 
 console.log('[versions report]')
@@ -30,7 +29,7 @@ console.log('[versions report end]')
 
 console.log('[ModuleManger.modulesDirPath]', ModuleManger.modulesDirPath)
 
-function createLive2dWindow() {
+const createLive2dWindow = () => {
   const displayBounds = screen.getPrimaryDisplay().bounds
   const win = new BrowserWindow({
     ...displayBounds,
@@ -41,7 +40,7 @@ function createLive2dWindow() {
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
-      spellcheck: false
+      spellcheck: false,
     },
     frame: false,
     transparent: true,
@@ -51,39 +50,19 @@ function createLive2dWindow() {
     hasShadow: false,
     enableLargerThanScreen: true,
     roundedCorners: false,
-    // movable: false,         // ❌ 禁止移动窗口
-    resizable: false,       // ❌ 禁止调整大小
-    maximizable: false,     // ❌ 禁止最大化
+    movable: false,
+    resizable: false,
+    maximizable: false,
   })
+  WindowHelper.useCommonSetting(win)
   win.setIgnoreMouseEvents(true, { forward: true })
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   win.setAlwaysOnTop(true, 'screen-saver', Number.MAX_VALUE)
-  win.on("ready-to-show", () => {
-    win.show()
-    win.setBounds(displayBounds)
-  })
-  win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: "deny" }
-  })
-  win.on('hide', () => {
-    win.setOpacity(0)
-    win.webContents.send('workspace-changed', 'hide')
-  })
-  win.on('show', () => {
-    win.setOpacity(1)
-    win.webContents.send('workspace-changed', 'show')
-  })
-  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-    win.loadURL(process.env["ELECTRON_RENDERER_URL"])
-  } else {
-    win.loadFile(join(__dirname, "../renderer/index.html"))
-  }
+  WindowHelper.useOpen(win)
   return win
 }
 
-
-function createInitWindow() {
+const createInitWindow = () => {
   new SharedValue('platform', platform)
   const win = new BrowserWindow({
     title: __APP_NAME__,
@@ -97,34 +76,20 @@ function createInitWindow() {
     autoHideMenuBar: true,
     closable: false
   })
-  win.on("ready-to-show", () => {
-    win.show()
-  })
-  win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: "deny" }
-  })
-  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-    win.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/init`)
-  } else {
-    win.loadFile(`${join(__dirname, "../renderer/index.html")}/init`)
-  }
+  WindowHelper.useCommonSetting(win)
+  WindowHelper.useOpen(win, '/init')
   return win
 }
 
 app.whenReady().then(async () => {
-  const displayBounds = screen.getPrimaryDisplay().bounds
-  protocol.handle("atom", (request) => {
-    const filePath = decodeURIComponent(request.url.slice("atom://".length))
-    console.log("[atom request]", filePath)
-    return net.fetch(url.pathToFileURL(filePath).toString())
-  })
+  applyProxy()
   electronApp.setAppUserModelId("com.wenxig.desktop-cucumber")
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
   app.dock?.hide()
 
+  const displayBounds = screen.getPrimaryDisplay().bounds
   const isEditMode = new SharedValue('isEditMode', false)
   new TrayMenu([{
     label: 'DevTool', type: 'normal', click: () => {
@@ -192,20 +157,7 @@ app.whenReady().then(async () => {
       WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
-  // handleMessage({
-  //   moduleDone() {
-  //     WindowManager.windows.get('init')?.close()
-  //     WindowManager.add('live2d', createLive2dWindow())
-  //   }
-  // })
-  InjectFunction.from('test', (...p) => {
-    return ['test', p]
-  })
-  InjectFunction.from('testError', (...p) => {
-    throw new Error('testError', {
-      cause: ['test', p]
-    })
-  })
+
   WindowManager.add('init', createInitWindow())
   await ModuleManger.init()
 })

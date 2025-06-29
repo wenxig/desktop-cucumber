@@ -1,13 +1,14 @@
 import type { On, InjectFunctionResult, InjectFunctionType, SharedValueType } from "@preload/type"
-import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from "electron"
+import { ipcMain, protocol, shell, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent, type Privileges, type WebContents } from "electron"
 import mitt from "mitt"
-import { platform } from "@electron-toolkit/utils"
+import { is, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import { Menu, Tray } from "electron/main"
 import { WindowManager } from "./windowManager"
 import fs from "fs/promises"
 import type { AnyFn } from "@vueuse/core"
+import path from 'path'
 export const alertMessage = <T extends keyof On['event']>(win: WebContents, event: T, ...args: On['event'][T]) => win.send(event, ...args)
 
 
@@ -172,5 +173,56 @@ export const tryRun = <T extends AnyFn>(fn: T, handleError: (err: Error) => Retu
       if (!(error instanceof Error)) throw error
       throw error[unprocessedErrorSymbol] = true && error
     }
+  }
+}
+
+export namespace WindowHelper {
+  export const useCommonSetting = (win: BrowserWindow) => {
+    win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => callback({
+      requestHeaders: {
+        Origin: '*',
+        ...details.requestHeaders
+      }
+    }))
+    win.webContents.session.webRequest.onHeadersReceived((details, callback) => callback({
+      responseHeaders: {
+        'Access-Control-Allow-Origin': ['*'],
+        ...details.responseHeaders,
+      },
+    }))
+    win.on("ready-to-show", () => {
+      win.show()
+    })
+    win.webContents.setWindowOpenHandler((details) => {
+      shell.openExternal(details.url)
+      return { action: "deny" }
+    })
+  }
+  export const useOpen = (win: BrowserWindow, _path = '/') => {
+    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+      win.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}${_path}`)
+    } else {
+      win.loadFile(`${path.join(__dirname, "../renderer/index.html")}${_path}`)
+    }
+  }
+}
+
+export const useProtocolProxy = (v: [schema: string, handler: (request: GlobalRequest) => (GlobalResponse) | (Promise<GlobalResponse>), config?: Privileges][]) => {
+  protocol.registerSchemesAsPrivileged(v.map(v => ({
+    scheme: v[0],
+    privileges: {
+      supportFetchAPI: true,
+      stream: true,
+      allowServiceWorkers: true,
+      corsEnabled: false,
+      standard: true,
+      secure: true,
+      bypassCSP: true,
+      codeCache: false,
+      ...(v[2] ?? {})
+    },
+  })))
+  return () => {
+    for (const row of v) protocol.handle(row[0], row[1])
   }
 }

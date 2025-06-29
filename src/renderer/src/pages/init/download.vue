@@ -1,9 +1,9 @@
 <script setup lang='ts'>
 import { DefineConfig } from '@preload/type'
 import { InjectFunction, SharedValue } from '@renderer/helpers/ipc'
+import { isArray, isEmpty } from 'lodash-es'
 import { FormInst, FormRules, NGridItem, type SelectOption } from 'naive-ui'
-import {  ref, shallowRef } from 'vue'
-
+import { ref, shallowRef } from 'vue'
 const options: SelectOption[] = [{
   label: '如"github"类的所有git站',
   value: 'github'
@@ -14,7 +14,8 @@ const options: SelectOption[] = [{
 
 const model = ref({
   method: <DefineConfig.ModuleFrom>'github',
-  url: ''
+  url: '',
+  fork: ''
 })
 const rules: FormRules = {
   url: {
@@ -22,7 +23,11 @@ const rules: FormRules = {
     validator(_rule, value: string) {
       switch (model.value.method) {
         case 'github':
-          return URL.canParse(value) || new Error('输入值不合规')
+          if (URL.canParse(value) && /\/([^\/#\?&=]+)\/([^\/#\?&=]+)/g.test(URL.parse(value)!.pathname)) {
+            searchForks()
+            return true
+          }
+          return new Error('输入值不合规')
         case 'local':
           const win32 = /^[A-Z]:\\([^\\\/\:\*\?\"\<\>\|]+\\)*([^\\\/\:\*\?\"\<\>\|]+)$/g
           const mac = /^\/([^:\/]+\/?)*([^:\/]+)$/g
@@ -33,7 +38,18 @@ const rules: FormRules = {
       }
     },
     trigger: ['input', 'blur']
-  }
+  },
+  fork: {
+    required: false,
+    validator(_rule, value: string) {
+      switch (model.value.method) {
+        case 'github':
+          return (!isEmpty(value)) || new Error('请选择分支')
+        case 'local': return true
+      }
+    },
+    trigger: ['input', 'blur']
+  },
 }
 const moduleInfo = shallowRef<boolean | undefined | DefineConfig.PackageJson>(undefined)
 const platform = new SharedValue('platform').toRef()
@@ -49,6 +65,18 @@ const loadInfoToModuleInfo = async () => {
 }
 const formRef = shallowRef<FormInst>()
 const $message = window.$message
+
+const githubForks = shallowRef<string[] | undefined | false>()
+const ModuleManager_gitLsRemote = InjectFunction.from('ModuleManger.gitLsRemote')
+let latestGithubForksSymbol: Symbol | undefined = undefined
+const searchForks = async () => {
+  githubForks.value = false
+  const [fp, s] = [ModuleManager_gitLsRemote(model.value.url), latestGithubForksSymbol ??= Symbol()]
+  const f = await fp
+  if (s !== latestGithubForksSymbol) return
+  githubForks.value = f
+  model.value.fork = f.at(0) ?? ''
+}
 </script>
 
 <template>
@@ -60,6 +88,10 @@ const $message = window.$message
         </NFormItemGi>
         <NFormItemGi :span="12" label="链接/路径" path="url">
           <NInput v-model:value="model.url" placeholder="请输入" clearable></NInput>
+        </NFormItemGi>
+        <NFormItemGi :span="8" label="分支" path="fork">
+          <NSelect :options="isArray(githubForks) ? githubForks.map(v => ({ label: v, value: v })) : []"
+            :loading="githubForks === false" v-model:value="model.fork" remote filterable></NSelect>
         </NFormItemGi>
         <NGridItem :span="24">
           <div class="flex w-full">
