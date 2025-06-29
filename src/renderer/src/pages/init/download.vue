@@ -2,7 +2,7 @@
 import { DefineConfig } from '@preload/type'
 import { InjectFunction, SharedValue } from '@renderer/helpers/ipc'
 import { FormInst, FormRules, NGridItem, type SelectOption } from 'naive-ui'
-import { computed, ref, shallowRef } from 'vue'
+import {  ref, shallowRef } from 'vue'
 
 const options: SelectOption[] = [{
   label: '如"github"类的所有git站',
@@ -24,9 +24,9 @@ const rules: FormRules = {
         case 'github':
           return URL.canParse(value) || new Error('输入值不合规')
         case 'local':
-          const win32 = /^[A-Z]:\\([^\\\/\:\*\?\"\<\>\|]+\\)*([^\\\/\:\*\?\"\<\>\|]+\\?)$/g
-          const mac = /^\/([^:\/]+\/?)*$/g
-          const linux = /^\/([^\/]+\/?)*$/g
+          const win32 = /^[A-Z]:\\([^\\\/\:\*\?\"\<\>\|]+\\)*([^\\\/\:\*\?\"\<\>\|]+)$/g
+          const mac = /^\/([^:\/]+\/?)*([^:\/]+)$/g
+          const linux = /^\/([^\/]+\/?)*([^\/]+)$/g
           if (platform.value.isLinux) return linux.test(value) || new Error('输入值不合规')
           if (platform.value.isMacOS) return mac.test(value) || new Error('输入值不合规')
           return win32.test(value) || new Error('输入值不合规')

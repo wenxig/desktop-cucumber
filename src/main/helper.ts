@@ -7,6 +7,7 @@ import macTrayIcon from "../../resources/iconTemplate@2x.png?asset"
 import { Menu, Tray } from "electron/main"
 import { WindowManager } from "./windowManager"
 import fs from "fs/promises"
+import type { AnyFn } from "@vueuse/core"
 export const alertMessage = <T extends keyof On['event']>(win: WebContents, event: T, ...args: On['event'][T]) => win.send(event, ...args)
 
 
@@ -110,11 +111,11 @@ export namespace FsHelper {
   export const readJsonFile = async <T extends object>(path: string, encoding: BufferEncoding = 'utf-8'): Promise<T> => JSON.parse((await fs.readFile(path)).toString(encoding))
 }
 
-export class InjectFunction<T extends keyof InjectFunctionType, FT extends (...args: any[]) => any = InjectFunctionType[T]> {
+export class InjectFunction<T extends keyof InjectFunctionType, FT extends AnyFn = InjectFunctionType[T]> {
   public destroy: () => void
   constructor(public readonly name: T, protected fun: FT) {
     const channel = `_call_function_${name}_`
-    const handleCallFunction = async (_e: IpcMainInvokeEvent, [p]: [Parameters<FT>]): Promise<InjectFunctionResult<ReturnType<FT>>> => {
+    const handleCallFunction = async (_e: IpcMainInvokeEvent, p: Parameters<FT>): Promise<InjectFunctionResult<ReturnType<FT>>> => {
       console.log(channel, p)
       try {
         return {
@@ -131,7 +132,8 @@ export class InjectFunction<T extends keyof InjectFunctionType, FT extends (...a
     ipcMain.handle(channel, handleCallFunction)
 
     const channelSync = `_call_function_sync_${name}_`
-    const handleCallFunctionSync = async (e: IpcMainEvent, [p]: [Parameters<FT>]): Promise<InjectFunctionResult<ReturnType<FT>>> => {
+    const handleCallFunctionSync = async (e: IpcMainEvent, p: Parameters<FT>): Promise<InjectFunctionResult<ReturnType<FT>>> => {
+      console.log(channelSync, p)
       try {
         return e.returnValue = {
           isError: false,
@@ -154,5 +156,21 @@ export class InjectFunction<T extends keyof InjectFunctionType, FT extends (...a
   public static from<T extends keyof InjectFunctionType, FT extends InjectFunctionType[T] = InjectFunctionType[T]>(name: T, fun: FT) {
     new InjectFunction(name, fun)
     return fun
+  }
+}
+
+const unprocessedErrorSymbol = Symbol('unprocessedError')
+export const tryRun = <T extends AnyFn>(fn: T, handleError: (err: Error) => ReturnType<T>): ReturnType<T> => {
+  try {
+    return fn()
+  } catch (error) {
+    if (!(error instanceof Error)) throw error
+    if (error[unprocessedErrorSymbol]) throw error
+    try {
+      return handleError(error)
+    } catch (error) {
+      if (!(error instanceof Error)) throw error
+      throw error[unprocessedErrorSymbol] = true && error
+    }
   }
 }

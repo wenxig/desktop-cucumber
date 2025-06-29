@@ -14,6 +14,6 @@ const loadUrl = ref(`/live2d/musumi_${known[1]}/model.json`)
 
 <template>
   <Stage>
-    <Lv2d v-model:loadUrl="loadUrl" controlable />
+    <Lv2d v-model:loadUrl="loadUrl" controllable />
   </Stage>
 </template>

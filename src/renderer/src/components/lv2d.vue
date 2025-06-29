@@ -3,15 +3,15 @@ import { onMounted, onBeforeUnmount, watch, computed, shallowRef, inject, markRa
 import { Live2DModel, } from "pixi-live2d-display-advanced"
 import { useLocalStorage } from "@vueuse/core"
 import { InjectKeys } from "@renderer/helpers/symbol"
-import { ModleConfig } from "@renderer/type"
+import { ModelConfig } from "@renderer/type"
 import { useStageStore } from "@renderer/stores/stage"
 import { debounce } from "lodash-es"
 import { HitAreaFrames } from "pixi-live2d-display-advanced/extra"
 const stageStore = useStageStore()
 const $props = withDefaults(defineProps<{
-  controlable?: boolean
+  controllable?: boolean
 }>(), {
-  controlable: false
+  controllable: false
 })
 
 onMounted(() => {
@@ -30,7 +30,7 @@ const init = async (loadUrl: string) => {
   if (!app) return
   if (model.value) app.stage.removeChild(model.value)
   const m = model.value = markRaw(await Live2DModel.from(loadUrl, {
-    autoFocus: !!$props.controlable,
+    autoFocus: !!$props.controllable,
   }))
   m.transform.pivot.set(m.width / 2, m.height / 2)
   const mc = modelConfig.value
@@ -39,19 +39,19 @@ const init = async (loadUrl: string) => {
   m.x = mc.x || app.stage.width / 2
   m.y = mc.y || app.stage.height / 2
   m.angle = mc.rotate
-  const hit=new HitAreaFrames()
-  hit.visible=true
+  const hit = new HitAreaFrames()
+  hit.visible = true
   m.addChild(hit)
 }
 
-const _modelConfig = defineModel<ModleConfig>('modelConfig')
-const l__modelConfig = useLocalStorage<ModleConfig>('modelConfig', {
+const _modelConfig = defineModel<ModelConfig>('modelConfig')
+const l__modelConfig = useLocalStorage<ModelConfig>('modelConfig', {
   x: 0,
   y: 0,
   rotate: 0,
   scale: 0.25
 })
-const modelConfig = computed<ModleConfig>({
+const modelConfig = computed<ModelConfig>({
   get() {
     return _modelConfig.value ?? l__modelConfig.value
   },
@@ -89,9 +89,9 @@ watch(model, model => {
     console.log('mouseleave')
   })
 })
-watch(() => [isHoveringModel.value, stageStore.isEditMode, stageStore.isTouchMode, $props.controlable] as const, debounce(([isHoveringModel, isEditMode, isTouchMode, controlable]) => {
+watch(() => [isHoveringModel.value, stageStore.isEditMode, stageStore.isTouchMode, $props.controllable] as const, debounce(([isHoveringModel, isEditMode, isTouchMode, controllable]) => {
   if (isEditMode || isTouchMode) {
-    canvas.style.opacity = controlable ? '1' : '0.05'
+    canvas.style.opacity = controllable ? '1' : '0.05'
     return
   }
   canvas.style.opacity = `${1 + (isHoveringModel ? -0.7 : 0)}`

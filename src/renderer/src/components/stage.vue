@@ -8,7 +8,7 @@ import { InjectFunction } from "@renderer/helpers/ipc"
 
 const stageStore = useStageStore()
 
-InjectFunction.fromSync('tiggerTaskBarHideStatue')()
+InjectFunction.fromSync('triggerTaskBarHideStatue')()
 const bgAlpha = computed(() =>
   stageStore.isEditMode ? 1 : 1
     - (stageStore.isFullScreen ? 0.3 : 0)

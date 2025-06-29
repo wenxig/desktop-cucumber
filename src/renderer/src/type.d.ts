@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-export interface ModleConfig {
+export interface ModelConfig {
   x: number
   y: number
   rotate: number

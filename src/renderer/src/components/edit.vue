@@ -1,7 +1,7 @@
 <script setup lang='ts'>
 import { watch, shallowRef } from "vue"
 import { toReactive, useDraggable, useEventListener, useLocalStorage } from "@vueuse/core"
-import { ModleConfig } from "@renderer/type"
+import { ModelConfig } from "@renderer/type"
 import { createMessageStore } from "@renderer/helpers/message"
 import { useStageStore } from "@renderer/stores/stage"
 import { ZoomOutMapRound, CropRotateRound, UndoRound } from "@vicons/material"
@@ -19,7 +19,7 @@ useEventListener('keydown', e => {
   if (e.key == 'Escape' && stageStore.isEditMode) stageStore.isEditMode = false
 })
 
-const modelConfig = useLocalStorage<ModleConfig>('modelConfig', {
+const modelConfig = useLocalStorage<ModelConfig>('modelConfig', {
   x: 0,
   y: 0,
   rotate: 0,

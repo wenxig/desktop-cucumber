@@ -21,6 +21,11 @@ const globalConfig = defineViteConfig({
   },
   define: {
     __APP_NAME__: `'${appName}'`
+  },
+  build:{
+    rollupOptions:{
+      external: ['nodegit']
+    }
   }
 })
 export default defineConfig({

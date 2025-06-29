@@ -1,17 +1,16 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
-    "./*.ts",
-    "src/main/*.ts",
-    "src/main/**/*.ts",
-    "src/perload/*.ts",
-    "src/perload/**/*.ts",
+    "./*",
+    "src/main/*",
+    "src/main/**/*",
+    "src/preload/*",
+    "src/preload/**/*",
   ],
   "compilerOptions": {
     "composite": true,
     "types": [
       "electron-vite/node",
-      "src/main/global.d.ts"
     ],
     "lib": [
       "ESNext",

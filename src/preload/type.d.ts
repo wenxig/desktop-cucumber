@@ -1,9 +1,7 @@
 import type { Platform } from "@electron-toolkit/utils"
+import type { AnyFn } from "@vueuse/core"
 import type { Rectangle } from "electron"
-type Api = {
-  tiggerTaskBarHideStatue: []
-  moduleDone: []
-}
+import { IPackageJson } from 'package-json-type'
 export type Inject = {
   sharedValue: {
     sync(name: string, v: any): void
@@ -23,7 +21,6 @@ export type On = {
   }
 }
 
-import { IPackageJson } from 'package-json-type'
 
 export namespace DefineConfig {
   export interface ModulesJson {
@@ -74,7 +71,7 @@ export interface SharedValueType {
   isTouchMode: boolean
 
   modules: DefineConfig.ModulesJson
-  modulesBooting: boolean
+  modulesBooting: boolean | Error
 
   platform: Platform
 }
@@ -87,11 +84,14 @@ export type InjectFunctionResult<T> = {
   result: unknown
 }
 export interface InjectFunctionType {
-  "ModuleManager.info": (url: string, mode: DefineConfig.ModuleFrom) => Promise<DefineConfig.PackageJson>
-  "ModuleManger.install": (url: string, mode: DefineConfig.ModuleFrom) => Promise<boolean>
-  "ModuleManger.uninstall": (namespace: string) => Promise<boolean>
-  tiggerTaskBarHideStatue: () => boolean
+  "ModuleManager.info"(url: string, mode: 'github', fork: string): Promise<DefineConfig.PackageJson>
+  "ModuleManager.info"(url: string, mode: 'local'): Promise<DefineConfig.PackageJson>
+  "ModuleManger.install"(url: string, mode: 'github', fork: string): Promise<boolean>
+  "ModuleManger.install"(url: string, mode: 'local'): Promise<boolean>
+  "ModuleManger.uninstall"(namespace: string): Promise<boolean>
+  "ModuleManger.gitLsRemote"(url: string): Promise<string[]>
+  triggerTaskBarHideStatue(): boolean
 
-  test: (...args: any[]) => any
+  test: AnyFn
   testError: (...args: any[]) => void
 }

@@ -41,6 +41,7 @@ function createLive2dWindow() {
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
+      spellcheck: false
     },
     frame: false,
     transparent: true,
@@ -91,6 +92,7 @@ function createInitWindow() {
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
+      spellcheck: false
     },
     autoHideMenuBar: true,
     closable: false
@@ -117,7 +119,7 @@ app.whenReady().then(async () => {
     console.log("[atom request]", filePath)
     return net.fetch(url.pathToFileURL(filePath).toString())
   })
-  electronApp.setAppUserModelId("com.wenxig.desktoptoy")
+  electronApp.setAppUserModelId("com.wenxig.desktop-cucumber")
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -154,12 +156,12 @@ app.whenReady().then(async () => {
   const isFullScreen = new SharedValue('isFullScreen', false)
   if (platform.isWindows) {
     const checkWindow = (w: Window) => {
-      const windowb = w.getBounds()
-      if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowb.height || !w.getTitle()) return false
-      if (windowb.x != 0 || windowb.height < displayBounds.height) return false
+      const windowBounds = w.getBounds()
+      if (!w.isWindow() || !w.isVisible() || w.path.startsWith('C:\\Windows') || !windowBounds.height || !w.getTitle()) return false
+      if (windowBounds.x != 0 || windowBounds.height < displayBounds.height) return false
       if (w.id != windowManager.getActiveWindow().id) return false
       if (w.processId == process.pid || w.processId == process.ppid) return false
-      console.log('fullscreen report', displayBounds, 'with', windowb)
+      console.log('fullscreen report', displayBounds, 'with', windowBounds)
       console.log('                   ', w.path, '|', w.id, '|', w.processId, w.getTitle())
       return true
     }
@@ -171,7 +173,7 @@ app.whenReady().then(async () => {
       isFullScreen.value = checkWindow(win)
     })
   }
-  new InjectFunction('tiggerTaskBarHideStatue', () => windowManager.emit('window-activated', windowManager.getActiveWindow()))
+  new InjectFunction('triggerTaskBarHideStatue', () => windowManager.emit('window-activated', windowManager.getActiveWindow()))
 
   const isTouchMode = new SharedValue('isTouchMode', false)
   globalShortcut.register('shift+alt+e', () => {
