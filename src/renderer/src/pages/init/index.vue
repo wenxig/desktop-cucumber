@@ -4,6 +4,8 @@ import { shallowRef, h, type Component, watch } from 'vue'
 import { AutoAwesomeMosaicFilled, FileDownloadRound } from '@vicons/material'
 import { RouterLink, RouteLocationRaw, useRouter } from 'vue-router'
 import { SharedValue } from '@renderer/helpers/ipc'
+import { isBoolean } from 'lodash-es'
+import { useInitStore } from '@renderer/stores/init'
 const $router = useRouter()
 const renderIcon = (icon: Component) => () => h(NIcon, null, { default: () => h(icon) })
 const renderButton = (text: string, to: RouteLocationRaw) => () => h(RouterLink, {
@@ -32,10 +34,13 @@ watch(isBooting, isBooting => {
     menuSelect.value = 'sort'
   }
 }, { immediate: true })
+
+const initStore = useInitStore()
+
 </script>
 
 <template>
-  <NSpin class="!h-full *:!h-full" :show="isBooting">
+  <NSpin class="!h-full *:!h-full" :show="initStore.isInstallModule || (isBoolean(isBooting) && isBooting)">
     <NSpace vertical class="!h-full *:!h-full" justify="center">
       <NLayout class="!h-full">
         <NLayoutHeader class="border-b-1 !h-8 flex items-center pl-8 font-bold text-lg" bordered>神经网络终端</NLayoutHeader>
@@ -52,7 +57,7 @@ watch(isBooting, isBooting => {
       </NLayout>
     </NSpace>
     <template #description>
-      下载核心包/未完成下载的包
+      {{ initStore.isInstallModule ? '生成人格中' : '生成核心人格/未完成生成的人格中' }}
     </template>
   </NSpin>
 </template>

@@ -89,6 +89,7 @@ const http = {
 }
 export namespace ModuleManger.installBy {
   const checkModule = (content: DefineConfig.PackageJson | false, { url }: DefineConfig.ModuleOrigin): content is DefineConfig.PackageJson => {
+    console.log('ModuleManger.installBy.checkModule', 'checking!', content, url)
     const err = new Error(`Install fail (${url} is not a module)`, { cause: `${url} is not a module` })
     if (content == false) {
       showErrorBox('人格生成错误-源不是人格数据', err)
@@ -97,8 +98,10 @@ export namespace ModuleManger.installBy {
     if (modules.value.module.find(v => v.namespace == content.desktopCucumber.module.namespace)) {
       const err = new Error(`Install fail (${content.desktopCucumber.module.namespace} is already existed)`, { cause: `${url} is not a module` })
       showErrorBox('人格生成错误-人格已存在', err)
+      console.log('ModuleManger.installBy.checkModule', 'check error!')
       return false
     }
+    console.log('ModuleManger.installBy.checkModule', 'check done!')
     return true
   }
   const addModule = async (content: DefineConfig.PackageJson, aimPath: string, origin: DefineConfig.ModuleOrigin) => {
@@ -137,7 +140,7 @@ export namespace ModuleManger.installBy {
     }
     if (!checkModule(content, origin)) return false
     const aimPath = path.join(modulesDirPath, saveDir)
-    await fs.cp(filePath, aimPath, { recursive: true })
+    await fs.cp(filePath, aimPath, { recursive: true, force: true })
     return addModule(content, aimPath, origin)
   }
 }
@@ -221,14 +224,14 @@ export namespace ModuleManger {
     return false as const
   }))
 
-  export const install = InjectFunction.from('ModuleManger.install', async (url: string, mode: DefineConfig.ModuleFrom, fork = 'main') => {
-    const saveDir = url.split('/').at(-1)!
+  export const install = InjectFunction.from('ModuleManger.install', (url: string, mode: DefineConfig.ModuleFrom, fork = 'main') => tryRun(async () => {
+    const saveDir = url.split(/\\|\//ig).at(-1)!
     switch (mode) {
       case 'github':
         var result = await installBy.github(url, saveDir, fork)
         break
       case "local":
-        var result =await installBy.local(url, saveDir)
+        var result = await installBy.local(url, saveDir)
         break
       default:
         const err = new Error(`Method not matched: ${mode}`, { cause: 'mode is undefined' })
@@ -237,7 +240,10 @@ export namespace ModuleManger {
     }
     console.log('[ModuleManger.install] done', url)
     return result
-  })
+  }, async err => {
+    showErrorBox('人格生成错误-胼胝体交互失败', err)
+    throw err
+  }))
 
   export const uninstall = InjectFunction.from('ModuleManger.uninstall', (namespace) => tryRun(async () => {
     const module = modules.value.module.find(v => v.namespace == namespace)

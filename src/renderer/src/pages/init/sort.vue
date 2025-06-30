@@ -1,23 +1,26 @@
 <script setup lang='ts'>
 import { SharedValue } from '@renderer/helpers/ipc'
 import { SettingsInputComponentRound } from '@vicons/material'
-import {isNumber}from 'lodash-es'
+import { isBoolean, isNumber } from 'lodash-es'
 const modules = new SharedValue('modules').toRef()
 </script>
 
 <template>
   <NScrollbar class="size-full">
     <TransitionGroup tag="ul" name="list">
-      <NAlert v-for="m of modules.module" :key="m.namespace" :title="m.displayName" :type="isNumber(m.enable)?'success':'default'"
-        class="w-[90%] mx-auto mt-1">
-        <template #icon>
-          <SettingsInputComponentRound />
+      <NCard v-for="m of modules.module" :key="m.namespace" :title="m.displayName" header-class="!pt-1 !pb-0 !px-3"
+        content-class="!pb-1 !px-3"
+        :class="[!isBoolean(m.enable) ? '!border-(--nn-primary-color)/20 !bg-(--nn-primary-color-hover)/10' : '!bg-(--nn-icon-color-disabled)/20 !border-(--nn-icon-color-pressed)/20 ']"
+        class="!w-[90%] mx-auto mt-1 ">
+        <template #header-extra>
+          <span class="text-(--text-color-3) italic font-thin" v-if="isBoolean(m.enable)">未启用</span>
+          <span class="text-(--text-color-3) italic font-thin" v-else>已启用</span>
         </template>
-        <NEl tag="span" class="text-(--text-color-3) -ml-4 italic font-bold mr-1" v-if="m.package.version">
+        <span class="text-(--nn-text-color-disabled) italic font-bold mr-3" v-if="m.package.version">
           v{{ m.package.version }}
-        </NEl>
-        {{ m.package.description }}
-      </NAlert>
+        </span>
+        <span class="text-(--nn-text-color-3)">{{ m.package.description }}</span>
+      </NCard>
     </TransitionGroup>
   </NScrollbar>
 </template>

@@ -8,7 +8,7 @@ import { windowManager, type Window } from 'node-window-manager'
 import { ModuleManger } from "./moduleManager"
 import { WindowManager } from "./windowManager"
 Error.prototype.toJSON = function () {
-  return JSON.parse(JSON.stringify(this))
+  return this.stack ?? this.message
 }
 const applyProxy = useProtocolProxy([
   ['atom', request => {

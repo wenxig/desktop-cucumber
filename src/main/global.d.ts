@@ -1,6 +1,6 @@
 declare global {
   interface Error {
-    toJSON: () => this
+    toJSON: () => string
   }
 }
 

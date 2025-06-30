@@ -1,4 +1,4 @@
-import { createApp, defineComponent } from "vue"
+import { computed, createApp, defineComponent, watch } from "vue"
 import App from "./App.vue"
 import "./index.css"
 import {
@@ -11,7 +11,6 @@ import {
 } from "naive-ui"
 import { router } from "./router"
 import { createPinia } from "pinia"
-
 const app = createApp(
   defineComponent(() => () => <NConfigProvider locale={zhCN} abstract>
     <NGlobalStyle />

@@ -73,7 +73,7 @@ export interface SharedValueType {
 
   modules: DefineConfig.ModulesJson
   modulesBooting: boolean | Error
-  modulesErrors: [name: string, error: Error][]
+  modulesErrors: [name: string, error: string][]
 
   platform: Platform
 }
