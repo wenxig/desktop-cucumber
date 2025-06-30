@@ -3,7 +3,6 @@ import path from 'path'
 import { FsHelper, InjectFunction, SharedValue, tryRun } from "./helper"
 import type { DefineConfig } from "../preload/type"
 import Git, { type GitHttpRequest, type GitHttpResponse } from 'isomorphic-git'
-import GitHttp from 'isomorphic-git/http/node/index.js'
 import { isArray, isEmpty, remove, spread, uniqBy } from "lodash-es"
 import { dialog, net } from "electron"
 const coreModuleUrl = 'https://github.com/wenxig/desktop-cucumber_core'
@@ -24,6 +23,12 @@ const http = {
       url: p.url,
     })
     if (p.body) for await (const chunk of p.body) request.write(Buffer.from(chunk))
+    if (p.signal) {
+      const signal = p.signal as AbortSignal
+      signal.onabort = () => {
+        request.abort()
+      }
+    }
     const chunks = new Array<Buffer<ArrayBufferLike>>()
     request.on('response', (response) => {
       const lengthHeader = response.headers['content-length']
@@ -212,7 +217,7 @@ export namespace ModuleManger {
         throw err
     }
   }, async err => {
-    showErrorBox('神经网络检索错误-人格不存在', err)
+    showErrorBox('神经网络检索错误-目标神经元失活', err)
     return false as const
   }))
 
@@ -220,14 +225,18 @@ export namespace ModuleManger {
     const saveDir = url.split('/').at(-1)!
     switch (mode) {
       case 'github':
-        await installBy.github(url, saveDir, fork)
+        var result = await installBy.github(url, saveDir, fork)
         break
       case "local":
-        await installBy.local(url, saveDir)
+        var result =await installBy.local(url, saveDir)
         break
+      default:
+        const err = new Error(`Method not matched: ${mode}`, { cause: 'mode is undefined' })
+        showErrorBox('人格生成错误-触酶未识别', err)
+        throw err
     }
     console.log('[ModuleManger.install] done', url)
-    return true
+    return result
   })
 
   export const uninstall = InjectFunction.from('ModuleManger.uninstall', (namespace) => tryRun(async () => {
