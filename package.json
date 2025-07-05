@@ -48,7 +48,7 @@
     "tailwindcss": "4.1.10",
     "typescript": "^5.8.3",
     "unplugin-vue-components": "^28.8.0",
-    "vite": "latest",
+    "vite": "npm:rolldown-vite@latest",
     "vue": "^3.5.17",
     "vue-tsc": "^2.2.10"
   },
@@ -62,6 +62,9 @@
       "node-window-manager",
       "nodegit",
       "vue-demi"
-    ]
+    ],
+    "overrides": {
+      "vite": "npm:rolldown-vite@latest"
+    }
   }
 }

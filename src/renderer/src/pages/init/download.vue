@@ -75,7 +75,7 @@ const formRef = shallowRef<FormInst>()
 const $message = window.$message
 
 const githubForks = shallowRef<string[] | undefined | false>()
-const ModuleManager_gitLsRemote = InjectFunction.from('ModuleManger.gitLsRemote')
+const ModuleManager_gitLsRemote = InjectFunction.from('ModuleManager.gitLsRemote')
 let latestGithubForksSymbol: Symbol | undefined = undefined
 const searchForks = async () => {
   githubForks.value = false
@@ -90,8 +90,9 @@ const searchForks = async () => {
     window.$message.error('源不是git仓库')
   }
 }
+
 const initStore = useInitStore()
-const ModuleManager_install = InjectFunction.from('ModuleManger.install')
+const ModuleManager_install = InjectFunction.from('ModuleManager.install')
 const downloadModule = async () => {
   initStore.isInstallModule = true
   await createLoadingMessage('生成人格中').bind(ModuleManager_install(model.value.url, model.value.method, model.value.fork), false)
@@ -145,7 +146,7 @@ const isDisabledButton = computed(() => {
     <!-- download -->
     <NTooltip trigger="hover" placement="left" v-if="!isDisabledButton && isObject(moduleInfo)">
       <template #trigger>
-        <NFloatButton @click="(e) => {
+        <NFloatButton @click="(e: MouseEvent) => {
           e.preventDefault()
           formRef?.validate((errors) => {
             if (!errors) downloadModule()

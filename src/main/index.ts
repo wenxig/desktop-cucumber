@@ -1,11 +1,11 @@
-import { app, BrowserWindow, protocol, net, screen, globalShortcut } from "electron"
+import { app, BrowserWindow, net, screen, globalShortcut } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, platform } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 import url from "url"
-import { InjectFunction, SharedValue, TrayMenu, useProtocolProxy, WindowHelper } from "./helper"
+import { InjectFunction, SharedValue, TrayMenu, useProtocolProxy } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
-import { ModuleManger } from "./moduleManager"
+import { moduleManager } from "./moduleManager"
 import { WindowManager } from "./windowManager"
 Error.prototype.toJSON = function () {
   return this.stack ?? this.message
@@ -27,21 +27,11 @@ for (const name in process.versions) {
 }
 console.log('[versions report end]')
 
-console.log('[ModuleManger.modulesDirPath]', ModuleManger.modulesDirPath)
+console.log('[ModuleManager.modulesDirPath]', moduleManager.modulesDirPath)
 
 const createLive2dWindow = () => {
-  const displayBounds = screen.getPrimaryDisplay().bounds
-  const win = new BrowserWindow({
-    ...displayBounds,
-    show: false,
-    title: __APP_NAME__,
-    autoHideMenuBar: true,
-    icon,
-    webPreferences: {
-      preload: join(__dirname, "../preload/index.mjs"),
-      sandbox: false,
-      spellcheck: false,
-    },
+  const win = WindowManager.create('live2d', {
+    ...screen.getPrimaryDisplay().bounds,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -54,34 +44,18 @@ const createLive2dWindow = () => {
     resizable: false,
     maximizable: false,
   })
-  WindowHelper.useCommonSetting(win)
   win.setIgnoreMouseEvents(true, { forward: true })
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   win.setAlwaysOnTop(true, 'screen-saver', Number.MAX_VALUE)
-  WindowHelper.useOpen(win)
   return win
 }
 
-const createInitWindow = () => {
-  new SharedValue('platform', platform)
-  const win = new BrowserWindow({
-    title: __APP_NAME__,
-    center: true,
-    icon,
-    webPreferences: {
-      preload: join(__dirname, "../preload/index.mjs"),
-      sandbox: false,
-      spellcheck: false
-    },
-    autoHideMenuBar: true,
-    closable: false
-  })
-  WindowHelper.useCommonSetting(win)
-  WindowHelper.useOpen(win, '/init')
-  return win
-}
+const createInitWindow = () => WindowManager.create('init', {
+  closable: false
+}, '/init')
 
 app.whenReady().then(async () => {
+  new SharedValue('platform', platform)
   applyProxy()
   electronApp.setAppUserModelId("com.wenxig.desktop-cucumber")
   app.on("browser-window-created", (_, window) => {
@@ -107,13 +81,14 @@ app.whenReady().then(async () => {
   }])
   isEditMode.watch((editMode) => {
     isTouchMode.value = false
+    const win = WindowManager.windows.get('live2d')
     if (editMode) {
-      WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(false)
-      WindowManager.windows.get('live2d')?.setFocusable(true)
-      WindowManager.windows.get('live2d')?.focus()
+      win?.setIgnoreMouseEvents(false)
+      win?.setFocusable(true)
+      win?.focus()
     } else {
-      WindowManager.windows.get('live2d')?.setFocusable(false)
-      WindowManager.windows.get('live2d')?.setIgnoreMouseEvents(true, { forward: true })
+      win?.setFocusable(false)
+      win?.setIgnoreMouseEvents(true, { forward: true })
     }
   })
 
@@ -158,13 +133,11 @@ app.whenReady().then(async () => {
     }
   })
 
-  WindowManager.add('init', createInitWindow())
-  await ModuleManger.init()
+  createInitWindow()
+  await moduleManager.init()
 })
 app.on("window-all-closed", () => {
-  if (!platform.isMacOS) {
-    app.quit()
-  }
+  if (!platform.isMacOS) app.quit()
 })
 app.on('before-quit', () => {
   process.exit(0)

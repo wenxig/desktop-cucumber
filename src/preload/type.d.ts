@@ -87,9 +87,9 @@ export type InjectFunctionResult<T> = {
 }
 export interface InjectFunctionType {
   "ModuleManager.info"(url: string, mode: DefineConfig.ModuleFrom, fork?: string): Promise<DefineConfig.PackageJson | false>
-  "ModuleManger.install"(url: string, mode: DefineConfig.ModuleFrom, fork?: string): Promise<boolean>
-  "ModuleManger.uninstall"(namespace: string): Promise<boolean>
-  "ModuleManger.gitLsRemote"(url: string): Promise<string[]>
+  "ModuleManager.install"(url: string, mode: DefineConfig.ModuleFrom, fork?: string): Promise<boolean>
+  "ModuleManager.uninstall"(namespace: string): Promise<boolean>
+  "ModuleManager.gitLsRemote"(url: string): Promise<string[]>
   triggerTaskBarHideStatue(): boolean
 
 }

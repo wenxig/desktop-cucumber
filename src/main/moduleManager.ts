@@ -87,41 +87,41 @@ const http = {
     return result.promise
   }
 }
-export namespace ModuleManger.installBy {
-  const checkModule = (content: DefineConfig.PackageJson | false, { url }: DefineConfig.ModuleOrigin): content is DefineConfig.PackageJson => {
-    console.log('ModuleManger.installBy.checkModule', 'checking!', content, url)
+class InstallIns {
+  private checkModule(content: DefineConfig.PackageJson | false, { url }: DefineConfig.ModuleOrigin): content is DefineConfig.PackageJson {
+    console.log('InstallBy.checkModule', 'checking!', content, url)
     const err = new Error(`Install fail (${url} is not a module)`, { cause: `${url} is not a module` })
     if (content == false) {
       showErrorBox('人格生成错误-源不是人格数据', err)
       return false
     }
-    if (modules.value.module.find(v => v.namespace == content.desktopCucumber.module.namespace)) {
+    if (this.ModuleManager.modules.value.module.find(v => v.namespace == content.desktopCucumber.module.namespace)) {
       const err = new Error(`Install fail (${content.desktopCucumber.module.namespace} is already existed)`, { cause: `${url} is not a module` })
       showErrorBox('人格生成错误-人格已存在', err)
-      console.log('ModuleManger.installBy.checkModule', 'check error!')
+      console.log('InstallBy.checkModule', 'check error!')
       return false
     }
-    console.log('ModuleManger.installBy.checkModule', 'check done!')
+    console.log('InstallBy.checkModule', 'check done!')
     return true
   }
-  const addModule = async (content: DefineConfig.PackageJson, aimPath: string, origin: DefineConfig.ModuleOrigin) => {
+  private async addModule(content: DefineConfig.PackageJson, aimPath: string, origin: DefineConfig.ModuleOrigin) {
     await fs.writeFile(path.join(aimPath, 'origin.txt'), JSON.stringify(origin))
-    modules.set(v => {
-      v.module.push(createModule(content, aimPath, origin, content.desktopCucumber.module.namespace != 'core'))
+    this.ModuleManager.modules.set(v => {
+      v.module.push(this.ModuleManager.createModule(content, aimPath, origin, content.desktopCucumber.module.namespace != 'core'))
       v.module = uniqBy(v.module, v => v.namespace)
       return v
     })
     return true
   }
 
-  export const github = async (url: string, saveDir: string, fork: string) => {
-    const content = await info(url, 'github')
+  public async github(url: string, saveDir: string, fork: string) {
+    const content = await this.ModuleManager.info(url, 'github')
     const origin: DefineConfig.ModuleOrigin = {
       from: 'github',
       url
     }
-    if (!checkModule(content, origin)) return false
-    const aimPath = path.join(modulesDirPath, saveDir)
+    if (!this.checkModule(content, origin)) return false
+    const aimPath = path.join(this.ModuleManager.modulesDirPath, saveDir)
     await Git.clone({
       fs,
       http,
@@ -129,66 +129,73 @@ export namespace ModuleManger.installBy {
       dir: aimPath,
       ref: fork
     })
-    return addModule(content, aimPath, origin)
+    return this.addModule(content, aimPath, origin)
   }
 
-  export const local = async (filePath: string, saveDir: string) => {
-    const content = await info(filePath, 'local')
+  public async local(filePath: string, saveDir: string) {
+    const content = await this.ModuleManager.info(filePath, 'local')
     const origin: DefineConfig.ModuleOrigin = {
       from: 'local',
       url: filePath
     }
-    if (!checkModule(content, origin)) return false
-    const aimPath = path.join(modulesDirPath, saveDir)
+    if (!this.checkModule(content, origin)) return false
+    const aimPath = path.join(this.ModuleManager.modulesDirPath, saveDir)
     await fs.cp(filePath, aimPath, { recursive: true, force: true })
-    return addModule(content, aimPath, origin)
+    return this.addModule(content, aimPath, origin)
   }
+  constructor(private ModuleManager: ModuleManager) { }
 }
-export namespace ModuleManger {
-  export const modulesDirPath = import.meta.env.DEV ? path.join(__dirname, '../../_temp', 'appModules') : path.join(__dirname, 'appModules')
-  export const modulesJsonPath = path.join(modulesDirPath, 'modules.json')
-  export const modules = new SharedValue('modules', {
+
+class ModuleManager {
+  private installBy: InstallIns
+  constructor() {
+    this.installBy = new InstallIns(this)
+  }
+  public modulesDirPath = import.meta.env.DEV ? path.join(__dirname, '../../_temp', 'appModules') : path.join(__dirname, 'appModules')
+  public modulesJsonPath = path.join(this.modulesDirPath, 'modules.json')
+  public modules = new SharedValue('modules', {
     module: []
   })
-  export const modulesBooting = new SharedValue('modulesBooting', true)
+  public modulesBooting = new SharedValue('modulesBooting', true)
 
-  export const init = () => tryRun(async () => {
+  public init = () => tryRun(async () => {
     const handleFsError = (err: Error) => {
       showErrorBox('人格初始化错误-海马体电信号弱', err)
-      modulesBooting.value = err
+      this.modulesBooting.value = err
       throw err
     }
     console.log('[ModuleManager.init] run!')
-    modulesBooting.value = true
+    this.modulesBooting.value = true
     await tryRun(async () => {
-      if (!await FsHelper.isExists(modulesDirPath)) await fs.mkdir(modulesDirPath)
-      process.chdir(modulesDirPath)
-      if (!await FsHelper.isExists(modulesJsonPath)) await fs.writeFile(modulesJsonPath, JSON.stringify(modules.value))
-      else modules.value = await FsHelper.readJsonFile(modulesJsonPath)
-      modules.watch(modules => fs.writeFile(modulesJsonPath, JSON.stringify(modules)))
+      if (!await FsHelper.isExists(this.modulesDirPath)) await fs.mkdir(this.modulesDirPath)
+      process.chdir(this.modulesDirPath)
+      if (!await FsHelper.isExists(this.modulesJsonPath)) await fs.writeFile(this.modulesJsonPath, JSON.stringify(this.modules.value))
+      else this.modules.value = await FsHelper.readJsonFile(this.modulesJsonPath)
+      this.modules.watch(modules => fs.writeFile(this.modulesJsonPath, JSON.stringify(modules)))
       console.log('[ModuleManager.init] dirs created')
     }, handleFsError)
 
-    await modules.set(async v => {
-      v.module.push(...await getUnrecordedModules(handleFsError))
+    await this.modules.set(async v => {
+      v.module.push(...await this.getUnrecordedModules(handleFsError))
       return v
     })
-    console.log('[ModuleManager.init] check core is install', isEmpty(modules.value.module))
-    if (isEmpty(modules.value.module)) await install(coreModuleUrl, 'github')
+    console.log('[ModuleManager.init] check core is install', isEmpty(this.modules.value.module))
+    if (isEmpty(this.modules.value.module)) await this.install(coreModuleUrl, 'github')
     console.log('[ModuleManager.init] core installed')
-    const uninstalledModules = await getUninstallModules(handleFsError)
+    const uninstalledModules = await this.getUninstallModules(handleFsError)
     console.log('[ModuleManager.init] find uninstalled:', uninstalledModules)
-    await Promise.all(uninstalledModules.map(({ origin: { url, from } }) => install(url, from)))
+    await Promise.all(uninstalledModules.map(({ origin: { url, from } }) => this.install(url, from)))
 
-    modulesBooting.value = false
+    this.modulesBooting.value = false
     console.log('[ModuleManager.init] done')
   }, err => {
     showErrorBox('人格初始化错误-神经突触失活', err)
-    modulesBooting.value = err
+    this.modulesBooting.value = err
     throw err
   })
 
-  export const gitLsRemote = InjectFunction.from('ModuleManger.gitLsRemote', url => tryRun(async () => {
+  @InjectFunction.inject('ModuleManager.gitLsRemote')
+  public gitLsRemote = (url: string) => tryRun(async () => {
     const refs = await Git.listServerRefs({
       http,
       prefix: "refs/heads/",
@@ -198,20 +205,21 @@ export namespace ModuleManger {
   }, err => {
     showErrorBox('神经网络错误-神经突触失活', err)
     throw err
-  }))
+  })
 
-  export const info = InjectFunction.from('ModuleManager.info', (url: string, mode: DefineConfig.ModuleFrom, fork = 'main') => tryRun(async () => {
+  @InjectFunction.inject('ModuleManager.info')
+  public info = (url: string, mode: DefineConfig.ModuleFrom, fork = 'main') => tryRun(async () => {
     switch (mode) {
       case "github":
-        console.log('[ModuleManger.info][from github]', `${url}/raw/refs/heads/${fork}/package.json`)
+        console.log('[ModuleManager.info][from github]', `${url}/raw/refs/heads/${fork}/package.json`)
         var content = <DefineConfig.PackageJson>await (await net.fetch(`${url}/raw/refs/heads/${fork}/package.json`, { method: 'GET' })).json()
-        console.log('[ModuleManger.info][from github]', 'package.json load done')
+        console.log('[ModuleManager.info][from github]', 'package.json load done')
         if (!content.desktopCucumber) return false
         return content
       case "local":
-        console.log('[ModuleManger.info][from local]', path.join(url, 'package.json'))
+        console.log('[ModuleManager.info][from local]', path.join(url, 'package.json'))
         var content = await FsHelper.readJsonFile<DefineConfig.PackageJson>(path.join(url, 'package.json'))
-        console.log('[ModuleManger.info][from local]', 'package.json load done')
+        console.log('[ModuleManager.info][from local]', 'package.json load done')
         if (!content.desktopCucumber) return false
         return content
       default:
@@ -222,37 +230,38 @@ export namespace ModuleManger {
   }, async err => {
     showErrorBox('神经网络检索错误-目标神经元失活', err)
     return false as const
-  }))
+  })
 
-  export const install = InjectFunction.from('ModuleManger.install', (url: string, mode: DefineConfig.ModuleFrom, fork = 'main') => tryRun(async () => {
+  @InjectFunction.inject('ModuleManager.install')
+  public install = (url: string, mode: DefineConfig.ModuleFrom, fork = 'main') => tryRun(async () => {
     const saveDir = url.split(/\\|\//ig).at(-1)!
     switch (mode) {
       case 'github':
-        var result = await installBy.github(url, saveDir, fork)
+        var result = await this.installBy.github(url, saveDir, fork)
         break
       case "local":
-        var result = await installBy.local(url, saveDir)
+        var result = await this.installBy.local(url, saveDir)
         break
       default:
         const err = new Error(`Method not matched: ${mode}`, { cause: 'mode is undefined' })
         showErrorBox('人格生成错误-触酶未识别', err)
         throw err
     }
-    console.log('[ModuleManger.install] done', url)
+    console.log('[ModuleManager.install] done', url)
     return result
   }, async err => {
     showErrorBox('人格生成错误-胼胝体交互失败', err)
     throw err
-  }))
-
-  export const uninstall = InjectFunction.from('ModuleManger.uninstall', (namespace) => tryRun(async () => {
-    const module = modules.value.module.find(v => v.namespace == namespace)
+  })
+  @InjectFunction.inject('ModuleManager.uninstall')
+  public uninstall = (namespace: string) => tryRun(async () => {
+    const module = this.modules.value.module.find(v => v.namespace == namespace)
     if (!module) {
       console.warn('Module not find (uninstall):', namespace)
       return false
     }
     await fs.rm(module.localPath, { force: true, recursive: true })
-    modules.set(v => {
+    this.modules.set(v => {
       remove(v.module, { namespace })
       return v
     })
@@ -260,14 +269,14 @@ export namespace ModuleManger {
   }, err => {
     showErrorBox('销毁人格错误-海马体电信号偏移', err)
     throw err
-  }))
+  })
 
-  const getUninstallModules = (handleError: (err: Error) => Promise<DefineConfig.Module[]>) => tryRun(async () => {
-    const recordedModules = modules.value.module
-    const installedModulesDir = await fs.readdir(modulesDirPath)
+  private getUninstallModules = (handleError: (err: Error) => Promise<DefineConfig.Module[]>) => tryRun(async () => {
+    const recordedModules = this.modules.value.module
+    const installedModulesDir = await fs.readdir(this.modulesDirPath)
     const installedModules = new Set<string>()
     for (const moduleDirName of installedModulesDir) {
-      const basepath = path.join(modulesDirPath, moduleDirName)
+      const basepath = path.join(this.modulesDirPath, moduleDirName)
       if (!(await fs.lstat(basepath)).isDirectory()) continue
       const packageJsonPath = path.join(basepath, 'package.json')
       if (!await FsHelper.isExists(packageJsonPath)) continue
@@ -276,12 +285,12 @@ export namespace ModuleManger {
     }
     return recordedModules.filter(v => !installedModules.has(v.namespace))
   }, handleError)
-  const getUnrecordedModules = (handleError: (err: Error) => Promise<DefineConfig.Module[]>) => tryRun(async () => {
-    const recordedModules = new Set(modules.value.module.map(v => v.namespace))
-    const installedModulesDir = await fs.readdir(modulesDirPath)
+  private getUnrecordedModules = (handleError: (err: Error) => Promise<DefineConfig.Module[]>) => tryRun(async () => {
+    const recordedModules = new Set(this.modules.value.module.map(v => v.namespace))
+    const installedModulesDir = await fs.readdir(this.modulesDirPath)
     const installedModules = new Array<[p: DefineConfig.PackageJson, localPath: string, origin: DefineConfig.ModuleOrigin]>()
     for (const moduleDirName of installedModulesDir) {
-      const basepath = path.join(modulesDirPath, moduleDirName)
+      const basepath = path.join(this.modulesDirPath, moduleDirName)
       if (!(await fs.lstat(basepath)).isDirectory()) continue
       const packageJsonPath = path.join(basepath, 'package.json')
       if (!await FsHelper.isExists(packageJsonPath)) continue
@@ -291,9 +300,9 @@ export namespace ModuleManger {
       const origin = await FsHelper.readJsonFile<DefineConfig.ModuleOrigin>(originPath)
       installedModules.push([content, basepath, origin])
     }
-    return installedModules.filter(v => !recordedModules.has(v[0].desktopCucumber.module.namespace)).map(spread(createModule))
+    return installedModules.filter(v => !recordedModules.has(v[0].desktopCucumber.module.namespace)).map(spread(this.createModule))
   }, handleError)
-  export const createModule = (from: DefineConfig.PackageJson, localPath: string, origin: DefineConfig.ModuleOrigin, closeable = true): DefineConfig.Module => ({
+  public createModule = (from: DefineConfig.PackageJson, localPath: string, origin: DefineConfig.ModuleOrigin, closeable = true): DefineConfig.Module => ({
     enable: closeable ? false : 0,
     namespace: from.desktopCucumber.module.namespace,
     origin,
@@ -303,3 +312,4 @@ export namespace ModuleManger {
     closeable
   })
 }
+export const moduleManager = new ModuleManager()
