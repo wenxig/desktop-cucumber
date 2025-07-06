@@ -1,4 +1,4 @@
-import { onUnmounted, ref, watch, type Ref } from "vue"
+import { onUnmounted, reactive, ref, triggerRef, watch, type Ref, type UnwrapRef } from "vue"
 import mitt from 'mitt'
 import type { InjectFunctionType, SharedValueType } from "@preload/type"
 
@@ -31,15 +31,18 @@ export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T
   }
   public toRef() {
     const v = ref(this._value)
-    const stopRawWatch = this.watch(val => v.value = val)
-    const stopWatch = watch(v, (v, ov) => {
-      if (v == ov) return
-      this.value = v
+    const stopRawWatch = this.watch(val =>{
+      v.value = val
+      triggerRef(v)
+      console.log('[ShareValue.toRef]', this.name, 'this.watch triggered:', val)
+    })
+    const watcher = watch(v, v => {
+      this.value = v.value
+      console.log('[ShareValue.toRef]', this.name, 'vue.watch triggered:', v)
     }, { deep: true })
     onUnmounted(() => {
-      stopWatch()
+      watcher.stop()
       stopRawWatch()
-      this.destroy()
     })
     return v as Ref<VT, VT>
   }
@@ -56,9 +59,9 @@ export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T
     this.update()
   }
   private update() {
+    window.inject.sharedValue.sync(this.name, this._value)
     this.mitt.emit('watch', this._value)
     sharedValueLocal.emit('changed', [this.name, this])
-    window.inject.sharedValue.sync(this.name, this._value)
   }
   private mitt = mitt<{
     watch: VT

@@ -179,9 +179,13 @@ class ModuleManager {
       v.module.push(...await this.getUnrecordedModules(handleFsError))
       return v
     })
-    console.log('[ModuleManager.init] check core is install', isEmpty(this.modules.value.module))
-    if (isEmpty(this.modules.value.module)) await this.install(coreModuleUrl, 'github')
-    console.log('[ModuleManager.init] core installed')
+
+    const isInstalledCoreModule = !!this.modules.value.module.find(v => v.namespace == 'core')
+    console.log('[ModuleManager.init] check core is install', isInstalledCoreModule)
+    if (!isInstalledCoreModule) {
+      await this.install(coreModuleUrl, 'github')
+      console.log('[ModuleManager.init] core installed')
+    }
     const uninstalledModules = await this.getUninstallModules(handleFsError)
     console.log('[ModuleManager.init] find uninstalled:', uninstalledModules)
     await Promise.all(uninstalledModules.map(({ origin: { url, from } }) => this.install(url, from)))
@@ -303,7 +307,7 @@ class ModuleManager {
     return installedModules.filter(v => !recordedModules.has(v[0].desktopCucumber.module.namespace)).map(spread(this.createModule))
   }, handleError)
   public createModule = (from: DefineConfig.PackageJson, localPath: string, origin: DefineConfig.ModuleOrigin, closeable = true): DefineConfig.Module => ({
-    enable: closeable ? false : 0,
+    enable: !closeable,
     namespace: from.desktopCucumber.module.namespace,
     origin,
     localPath,

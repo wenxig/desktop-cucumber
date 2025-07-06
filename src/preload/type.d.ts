@@ -32,7 +32,7 @@ export namespace DefineConfig {
     url: string
   }
   export interface Module {
-    enable: false | number
+    enable: boolean
     namespace: string
     displayName: string
     origin: ModuleOrigin,
