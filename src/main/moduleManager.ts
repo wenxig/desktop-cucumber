@@ -1,10 +1,11 @@
 import fs from "fs/promises"
 import path from 'path'
-import { FsHelper, InjectFunction, SharedValue, tryRun } from "./helper"
+import { FsHelper, tryRun } from "./helper"
 import type { DefineConfig } from "../preload/type"
 import Git, { type GitHttpRequest, type GitHttpResponse } from 'isomorphic-git'
-import { isArray, isEmpty, remove, spread, uniqBy } from "lodash-es"
+import { defaultsDeep, isArray, isString, remove, spread, uniqBy } from "lodash-es"
 import { dialog, net } from "electron"
+import { InjectFunction, SharedValue, } from "./ipc"
 const coreModuleUrl = 'https://github.com/wenxig/desktop-cucumber_core'
 const modulesErrors = new SharedValue('modulesErrors', [])
 const showErrorBox = (displayName: string, error: Error) => {
@@ -274,7 +275,6 @@ class ModuleManager {
     showErrorBox('销毁人格错误-海马体电信号偏移', err)
     throw err
   })
-
   private getUninstallModules = (handleError: (err: Error) => Promise<DefineConfig.Module[]>) => tryRun(async () => {
     const recordedModules = this.modules.value.module
     const installedModulesDir = await fs.readdir(this.modulesDirPath)
@@ -315,5 +315,45 @@ class ModuleManager {
     displayName: from.desktopCucumber.module.displayName,
     closeable
   })
+
+  private modelDefines = new SharedValue('modelDefines', [])
+  @InjectFunction.inject('ModuleManager.done')
+  public async done() {
+
+  }
+  public handleNetProtocol(namespace: string, id: string): Response/*<DefineConfig.ModelAssignedDefine>*/ {
+    const createError = (reason: string) => {
+      const err = new Error(reason)
+      dialog.showErrorBox('神经网络错误-人格活性低', err.stack ?? err.message)
+      return new Response(`Model Load Error:\n${reason}`, { status: 400 })
+    }
+    const modules = this.modules.value.module
+    const baseModule = modules.find(v => v.namespace == namespace)
+    if (!baseModule) return createError(`baseModule not found (namespace=${namespace})`)
+    const models = baseModule.package.desktopCucumber.models
+    const baseModel = models.find(v => v.id == id)
+    if (!baseModel) return createError(`baseModel not found (namespace=${namespace}, id=${id})`)
+    const extendsConfig = (baseModel.extends ?? []).map(v => ModuleManager.toResourceLocation(v))
+    const extendsOriginModel = modules.filter(v => extendsConfig.some(e => e.namespace == v.namespace))?.map(v => v.package.desktopCucumber.models.find(v => extendsConfig.some(e => e.id == v.id)))
+    let model = baseModel
+    for (const source of extendsOriginModel) {
+      if (!source) return createError(`source not found`)
+      model = defaultsDeep(model, source)
+    }
+    // patch path
+    const modelString = JSON.stringify(model).replace(/"\.\/([^\/]+\/?)*([^\/]+)"/ig, p => `"atom://${path.join(baseModule.localPath, p)}"`)
+    return new Response(modelString, {
+      status: 200,
+      headers: {
+        "Content-Type": 'application/json'
+      }
+    })
+  }
+  public static toResourceLocation(value: DefineConfig.ResourceLocation_): DefineConfig.ResourceLocation {
+    return isString(value) ? {
+      namespace: value.split(':')[0],
+      id: value.split(':')[1]
+    } : value
+  }
 }
 export const moduleManager = new ModuleManager()

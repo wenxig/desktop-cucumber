@@ -2,7 +2,7 @@ import { isFunction, defaultsDeep } from "lodash-es"
 import type { On } from "../preload/type"
 import type { AnyFn } from "@vueuse/core"
 import path from 'path'
-import { BrowserWindow, shell, type BrowserWindowConstructorOptions, type Privileges } from "electron"
+import { BrowserWindow, shell, type BrowserWindowConstructorOptions } from "electron"
 import { is, } from "@electron-toolkit/utils"
 import icon from "../../resources/iconWhite.png?asset"
 

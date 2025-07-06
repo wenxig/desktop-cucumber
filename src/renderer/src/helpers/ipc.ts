@@ -1,6 +1,8 @@
-import { onUnmounted, reactive, ref, triggerRef, watch, type Ref, type UnwrapRef } from "vue"
+import { onUnmounted, ref, triggerRef, watch, type Ref } from "vue"
 import mitt from 'mitt'
 import type { InjectFunctionType, SharedValueType } from "@preload/type"
+import { isFunction, isObject } from "lodash-es"
+import { toRaw } from "vue"
 
 const sharedValueLocal = mitt<{
   changed: [name: string, value: SharedValue<any>]
@@ -11,15 +13,18 @@ export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T
   constructor(public readonly name: T) {
     this._value = window.inject.sharedValue.boot<VT>(name)
     const stopSync = window.inject.sharedValue.watch<VT>(name, value => {
+      console.log('[ShareValue] been sync', this.name, this.value, '->', value)
       this.value = value
     })
     const handleLocalSync = ([name, value]: [name: string, value: SharedValue<any>]) => {
       if (name != this.name || value == this) return
+      console.log('[ShareValue] handleLocalSync', this.name, this.value, '->', value.value)
       this._value = value.value
       this.mitt.emit('watch', value.value)
     }
     sharedValueLocal.on('changed', handleLocalSync)
     this.destroy = () => {
+      console.log('[ShareValue] destroy', this.name)
       try {
         stopSync()
         sharedValueLocal.off('changed', handleLocalSync)
@@ -31,14 +36,17 @@ export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T
   }
   public toRef() {
     const v = ref(this._value)
-    const stopRawWatch = this.watch(val =>{
+    let isTrigger = false
+    const stopRawWatch = this.watch(val => {
       v.value = val
+      isTrigger = true
       triggerRef(v)
       console.log('[ShareValue.toRef]', this.name, 'this.watch triggered:', val)
     })
     const watcher = watch(v, v => {
-      this.value = v.value
+      if (isTrigger) return isTrigger = false
       console.log('[ShareValue.toRef]', this.name, 'vue.watch triggered:', v)
+      this.value = v
     }, { deep: true })
     onUnmounted(() => {
       watcher.stop()
@@ -50,15 +58,18 @@ export class SharedValue<T extends keyof SharedValueType, VT = SharedValueType[T
     return this._value
   }
   set value(v) {
-    if (this._value == v) return
-    this._value = v
+    if (!isObject(v) && !isFunction(v)) if (this._value == v) return
+    console.log('[ShareValue] setter value', this.name, v)
+    this._value = toRaw(v)
     this.update()
   }
   public set(f: (v: VT) => VT) {
     this._value = f(this._value)
+    console.log('[ShareValue] set() value', this.name, this._value)
     this.update()
   }
   private update() {
+    console.log('[ShareValue] update', this.name, this._value)
     window.inject.sharedValue.sync(this.name, this._value)
     this.mitt.emit('watch', this._value)
     sharedValueLocal.emit('changed', [this.name, this])

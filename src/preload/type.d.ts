@@ -55,15 +55,17 @@ export namespace DefineConfig {
   export interface ModelDefine {
     id: string
     path: string
-    extends?: _ResourceLocation[]
+    extends?: ResourceLocation_[]
     name: string
     hitbox?: boolean
   }
-  export type _ResourceLocation = ResourceLocation | string
+  export type ResourceLocation_ = ResourceLocation | string
   export interface ResourceLocation {
     namespace: string
     id: string
   }
+
+  export type ModelAssignedDefine = (DefineConfig.ModelDefine & { configUrl: string })
 }
 
 export interface SharedValueType {
@@ -74,6 +76,7 @@ export interface SharedValueType {
   modules: DefineConfig.ModulesJson
   modulesBooting: boolean | Error
   modulesErrors: [name: string, error: string][]
+  modelDefines: DefineConfig.ModelAssignedDefine[]
 
   platform: Platform
 }
@@ -90,6 +93,7 @@ export interface InjectFunctionType {
   "ModuleManager.install"(url: string, mode: DefineConfig.ModuleFrom, fork?: string): Promise<boolean>
   "ModuleManager.uninstall"(namespace: string): Promise<boolean>
   "ModuleManager.gitLsRemote"(url: string): Promise<string[]>
+  "ModuleManager.done"(): Promise<void>
   triggerTaskBarHideStatue(): boolean
 
 }

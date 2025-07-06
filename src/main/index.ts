@@ -1,31 +1,32 @@
-import { app, BrowserWindow, net, screen, globalShortcut } from "electron"
-import { join } from "path"
+import { app, net, screen, globalShortcut } from "electron"
 import { electronApp, optimizer, platform } from "@electron-toolkit/utils"
-import icon from "../../resources/iconWhite.png?asset"
 import url from "url"
-import { InjectFunction, SharedValue, TrayMenu, useProtocolProxy } from "./helper"
+import { TrayMenu, useProtocolProxy } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
 import { moduleManager } from "./moduleManager"
 import { WindowManager } from "./windowManager"
+import { InjectFunction, SharedValue } from './ipc'
 Error.prototype.toJSON = function () {
   return this.stack ?? this.message
 }
-const applyProxy = useProtocolProxy([
-  ['atom', request => {
-    const filePath = decodeURIComponent(request.url.slice("atom://".length))
-    console.log("[atom request]", filePath)
-    return net.fetch(url.pathToFileURL(filePath).toString())
-  }]
-])
 
 console.log('[versions report]')
-for (const name in process.versions) {
-  if (Object.prototype.hasOwnProperty.call(process.versions, name)) {
-    const version = process.versions[name]
-    console.log(name, ':', version)
-  }
-}
+for (const name in process.versions) if (Object.prototype.hasOwnProperty.call(process.versions, name)) console.log(name, ':', process.versions[name])
 console.log('[versions report end]')
+
+const applyProxy = useProtocolProxy([
+  ['atom', filePath => {
+    console.log("[atom request]", filePath)
+    return net.fetch(url.pathToFileURL(filePath).toString())
+  }],
+
+  // model://{namespace}/{id}
+  ['model', path => {
+    const [namespace, ...id] = path.split('/')
+    const response = moduleManager.handleNetProtocol(namespace, id.join('/'))
+    return response
+  }]
+])
 
 console.log('[ModuleManager.modulesDirPath]', moduleManager.modulesDirPath)
 
