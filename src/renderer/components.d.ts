@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AnimatePresence: typeof import('motion-v')['AnimatePresence']
     ButtonSlider: typeof import('./src/components/buttonSlider.vue')['default']
     ButtonTextIcon: typeof import('./src/components/buttonTextIcon.vue')['default']
     ButtonTooltip: typeof import('./src/components/buttonTooltip.vue')['default']
@@ -26,13 +27,16 @@ declare module 'vue' {
     NGridItem: typeof import('naive-ui')['NGridItem']
     NIcon: typeof import('naive-ui')['NIcon']
     NInput: typeof import('naive-ui')['NInput']
+    NInputNumber: typeof import('naive-ui')['NInputNumber']
     NLayout: typeof import('naive-ui')['NLayout']
     NLayoutHeader: typeof import('naive-ui')['NLayoutHeader']
     NLayoutSider: typeof import('naive-ui')['NLayoutSider']
     NMenu: typeof import('naive-ui')['NMenu']
+    NPopover: typeof import('naive-ui')['NPopover']
     NPopselect: typeof import('naive-ui')['NPopselect']
     NScrollbar: typeof import('naive-ui')['NScrollbar']
     NSelect: typeof import('naive-ui')['NSelect']
+    NSlider: typeof import('naive-ui')['NSlider']
     NSpace: typeof import('naive-ui')['NSpace']
     NSpin: typeof import('naive-ui')['NSpin']
     NTooltip: typeof import('naive-ui')['NTooltip']

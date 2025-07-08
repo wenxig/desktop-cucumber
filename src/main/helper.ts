@@ -44,7 +44,7 @@ export namespace FsHelper {
 
 
 const unprocessedErrorSymbol = Symbol('unprocessedError')
-export const tryRun = <T extends AnyFn>(fn: T, handleError: (err: Error) => ReturnType<T>): ReturnType<T> => {
+export const tryRun = <T extends AnyFn | ((...args: any[]) => Promise<any>)>(fn: T, handleError: (err: Error) => ReturnType<T>): ReturnType<T> => {
   try {
     return fn()
   } catch (error) {

@@ -7,6 +7,7 @@ import { ModelConfig } from "@renderer/type"
 import { useStageStore } from "@renderer/stores/stage"
 import { debounce } from "lodash-es"
 import { HitAreaFrames } from "pixi-live2d-display-advanced/extra"
+import { DefineConfig } from "@preload/type"
 const stageStore = useStageStore()
 const $props = withDefaults(defineProps<{
   controllable?: boolean
@@ -15,21 +16,21 @@ const $props = withDefaults(defineProps<{
 })
 
 onMounted(() => {
-  watch(loadUrl, async loadUrl => {
+  watch(loadModel, async loadUrl => {
     await init(loadUrl)
   }, { immediate: true })
 })
 onBeforeUnmount(() => {
   model.value = undefined
 })
-const loadUrl = defineModel<string>('loadUrl', { required: true })
+const loadModel = defineModel<DefineConfig.ModelAssignedDefine>('loadModel', { required: true })
 const useStage = inject(InjectKeys.useStage)
 const [app, canvas] = await useStage!()
 const model = shallowRef<Raw<Live2DModel>>()
-const init = async (loadUrl: string) => {
+const init = async (loadUrl: DefineConfig.ModelAssignedDefine) => {
   if (!app) return
   if (model.value) app.stage.removeChild(model.value)
-  const m = model.value = markRaw(await Live2DModel.from(loadUrl, {
+  const m = model.value = markRaw(await Live2DModel.from(loadUrl.configUrl, {
     autoFocus: !!$props.controllable,
   }))
   m.transform.pivot.set(m.width / 2, m.height / 2)

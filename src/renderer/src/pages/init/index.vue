@@ -1,11 +1,12 @@
 <script setup lang='ts'>
 import { type MenuOption, NIcon } from 'naive-ui'
 import { shallowRef, h, type Component, watch } from 'vue'
-import { AutoAwesomeMosaicFilled, FileDownloadRound } from '@vicons/material'
+import { AutoAwesomeMosaicFilled, CheckRound, FileDownloadRound } from '@vicons/material'
 import { RouterLink, RouteLocationRaw, useRouter } from 'vue-router'
-import { SharedValue } from '@renderer/helpers/ipc'
+import { InjectFunction, SharedValue } from '@renderer/helpers/ipc'
 import { isBoolean } from 'lodash-es'
 import { useInitStore } from '@renderer/stores/init'
+import { createLoadingMessage } from '@renderer/helpers/message'
 const $router = useRouter()
 const renderIcon = (icon: Component) => () => h(NIcon, null, { default: () => h(icon) })
 const renderButton = (text: string, to: RouteLocationRaw) => () => h(RouterLink, {
@@ -37,6 +38,11 @@ watch(isBooting, isBooting => {
 
 const initStore = useInitStore()
 
+const loadDone = () => {
+  const loading = createLoadingMessage('正在释放神经递质')
+  InjectFunction.from('ModuleManager.done')()
+  window.inject.event('live2d-opened', () => loading.success('Find real me', 100))
+}
 </script>
 
 <template>
@@ -52,6 +58,7 @@ const initStore = useInitStore()
           </NLayoutSider>
           <NLayout class="!h-full">
             <RouterView />
+
           </NLayout>
         </NLayout>
       </NLayout>
@@ -60,4 +67,15 @@ const initStore = useInitStore()
       {{ initStore.isInstallModule ? '生成人格中' : '生成核心人格/未完成生成的人格中' }}
     </template>
   </NSpin>
+  <!-- done -->
+  <NTooltip trigger="hover" placement="right">
+    <template #trigger>
+      <NFloatButton @click="loadDone" :left="10" :bottom="10" class="!z-100000" type="primary" shape="circle">
+        <NIcon :size="25">
+          <CheckRound />
+        </NIcon>
+      </NFloatButton>
+    </template>
+    唤醒<span class="italic font-light">若叶睦</span>
+  </NTooltip>
 </template>

@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import { defineConfig, defineViteConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig, defineViteConfig, externalizeDepsPlugin, swcPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers"
@@ -30,7 +30,7 @@ const globalConfig = defineViteConfig({
 })
 export default defineConfig({
   main: mergeConfig(globalConfig, {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), swcPlugin()],
   }),
   preload: mergeConfig(globalConfig, {
     plugins: [externalizeDepsPlugin()],

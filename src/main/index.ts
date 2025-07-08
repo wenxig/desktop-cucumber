@@ -34,6 +34,7 @@ const createLive2dWindow = () => {
   const win = WindowManager.create('live2d', {
     ...screen.getPrimaryDisplay().bounds,
     frame: false,
+    backgroundColor: '#00000000',
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -134,7 +135,16 @@ app.whenReady().then(async () => {
     }
   })
 
-  createInitWindow()
+  const initWin = createInitWindow()
+  moduleManager.onDone(() => {
+    const live2d = createLive2dWindow()
+    live2d.on('show', () => WindowManager.alertMessage('live2d-opened'))
+  })
+  InjectFunction.from('live2dDone', () => {
+    setTimeout(() => {
+      initWin.close()
+    }, 100)
+  })
   await moduleManager.init()
 })
 app.on("window-all-closed", () => {

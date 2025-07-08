@@ -17,7 +17,8 @@ export type Inject = {
 
 export type On = {
   event: {
-    'workspace-changed': [is: 'show' | 'hide']
+    'workspace-changed': [is: 'show' | 'hide'],
+    'live2d-opened': []
   }
 }
 
@@ -39,13 +40,14 @@ export namespace DefineConfig {
     localPath: string
     package: PackageJson
     closeable: boolean
+    models: ModelDefine[]
   }
   export interface PackageJson extends IPackageJson {
     desktopCucumber: Config
   }
   export interface Config {
     module: ModuleConfig
-    models: ModelDefine[]
+    models?: ModelDefine[]
   }
   export interface ModuleConfig {
     namespace: string
@@ -66,6 +68,11 @@ export namespace DefineConfig {
   }
 
   export type ModelAssignedDefine = (DefineConfig.ModelDefine & { configUrl: string })
+
+
+  export interface DefineModelFile extends object {
+
+  }
 }
 
 export interface SharedValueType {
@@ -95,5 +102,5 @@ export interface InjectFunctionType {
   "ModuleManager.gitLsRemote"(url: string): Promise<string[]>
   "ModuleManager.done"(): Promise<void>
   triggerTaskBarHideStatue(): boolean
-
+  live2dDone(): void
 }

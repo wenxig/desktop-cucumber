@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@swc/core": "^1.12.11",
     "@vicons/material": "^0.13.0",
     "@vueuse/core": "^13.4.0",
     "isomorphic-git": "^1.32.0",

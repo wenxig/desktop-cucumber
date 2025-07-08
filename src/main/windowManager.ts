@@ -36,10 +36,10 @@ export namespace WindowManager {
   }
   export const alertMessage = <T extends keyof On['event']>(event: T, ...args: On['event'][T]) => {
     // @ts-ignore
-    each(win => alertMessage(win.webContents, event, ...args))
+    each(win => win.webContents.send(event, ...args))
   }
   export const create = (name: string, config: Partial<BrowserWindowConstructorOptions>, _path = '/') => {
-    config = defaultsDeep(config, {
+    config = defaultsDeep(config, <BrowserWindowConstructorOptions>{
       title: __APP_NAME__,
       center: true,
       icon,
@@ -50,6 +50,7 @@ export namespace WindowManager {
       },
       autoHideMenuBar: true,
       show: false,
+      ...config
     })
     const win = new BrowserWindow(config)
     win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => callback({
@@ -64,8 +65,11 @@ export namespace WindowManager {
         ...details.responseHeaders,
       },
     }))
+    console.log(name, 'window created', config)
     win.on("ready-to-show", () => {
-      win.show()
+      console.log(name, 'window show')
+
+     win.show()
     })
     win.webContents.setWindowOpenHandler((details) => {
       shell.openExternal(details.url)
