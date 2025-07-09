@@ -56,6 +56,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@parcel/watcher",
+      "@swc/core",
       "@tailwindcss/oxide",
       "electron",
       "esbuild",

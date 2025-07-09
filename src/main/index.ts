@@ -1,11 +1,12 @@
 import { app, net, screen, globalShortcut } from "electron"
 import { electronApp, optimizer, platform } from "@electron-toolkit/utils"
 import url from "url"
-import { TrayMenu, useProtocolProxy } from "./helper"
 import { windowManager, type Window } from 'node-window-manager'
-import { moduleManager } from "./moduleManager"
-import { WindowManager } from "./windowManager"
-import { InjectFunction, SharedValue } from './ipc'
+import { InjectFunction, SharedValue } from './helper/ipc'
+import { useProtocolProxy, TrayMenu } from "./helper/app"
+import { ModuleManager } from "./manager/module"
+import { WindowManager } from "./manager/window"
+import { useAtomStore } from "./store/atom"
 Error.prototype.toJSON = function () {
   return this.stack ?? this.message
 }
@@ -15,20 +16,24 @@ for (const name in process.versions) if (Object.prototype.hasOwnProperty.call(pr
 console.log('[versions report end]')
 
 const applyProxy = useProtocolProxy([
-  ['atom', filePath => {
-    console.log("[atom request]", filePath)
-    return net.fetch(url.pathToFileURL(filePath).toString())
+  ['atom', (_path, req) => {
+    const atomStore = useAtomStore()
+    const p = atomStore.get(req.url)
+    console.log("[atom request]", req.url, p)
+    if (!p) throw new Error(`id not found (id=${req.url})`)
+    console.log("[atom request]", req.url, p)
+    return net.fetch(url.pathToFileURL(p).toString())
   }],
 
   // model://{namespace}/{id}
   ['model', path => {
     const [namespace, ...id] = path.split('/')
-    const response = moduleManager.handleNetProtocol(namespace, id.join('/'))
+    const response = ModuleManager.handleNetProtocol(namespace, id.join('/'))
     return response
   }]
 ])
 
-console.log('[ModuleManager.modulesDirPath]', moduleManager.modulesDirPath)
+console.log('[ModuleManager.modulesDirPath]', ModuleManager.modulesDirPath)
 
 const createLive2dWindow = () => {
   const win = WindowManager.create('live2d', {
@@ -136,16 +141,16 @@ app.whenReady().then(async () => {
   })
 
   const initWin = createInitWindow()
-  moduleManager.onDone(() => {
+  ModuleManager.onDone(() => {
     const live2d = createLive2dWindow()
-    live2d.on('show', () => WindowManager.alertMessage('live2d-opened'))
+    live2d.on('show', () => {
+      WindowManager.alertMessage('live2d-opened')
+      setTimeout(() => {
+        initWin.destroy()
+      }, 100)
+    })
   })
-  InjectFunction.from('live2dDone', () => {
-    setTimeout(() => {
-      initWin.close()
-    }, 100)
-  })
-  await moduleManager.init()
+  await ModuleManager.init()
 })
 app.on("window-all-closed", () => {
   if (!platform.isMacOS) app.quit()

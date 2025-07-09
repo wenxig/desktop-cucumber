@@ -1,10 +1,10 @@
 import { isFunction, defaultsDeep } from "lodash-es"
-import type { On } from "../preload/type"
+import type { On } from "@preload/type"
 import type { AnyFn } from "@vueuse/core"
 import path from 'path'
 import { BrowserWindow, shell, type BrowserWindowConstructorOptions } from "electron"
 import { is, } from "@electron-toolkit/utils"
-import icon from "../../resources/iconWhite.png?asset"
+import icon from "../../../resources/iconWhite.png?asset"
 
 
 export namespace WindowManager {

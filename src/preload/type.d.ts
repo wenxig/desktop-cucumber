@@ -102,5 +102,4 @@ export interface InjectFunctionType {
   "ModuleManager.gitLsRemote"(url: string): Promise<string[]>
   "ModuleManager.done"(): Promise<void>
   triggerTaskBarHideStatue(): boolean
-  live2dDone(): void
 }
